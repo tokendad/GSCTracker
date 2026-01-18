@@ -38,31 +38,35 @@ if [ -n "$TZ" ]; then
     esac
 fi
 
-# Update nginx user/group IDs if different from defaults
-CURRENT_UID=$(id -u nginx)
-CURRENT_GID=$(id -g nginx)
+# Create node user/group if it doesn't exist
+if ! getent group node >/dev/null 2>&1; then
+    addgroup -g "$PGID" node
+fi
+
+if ! getent passwd node >/dev/null 2>&1; then
+    adduser -D -u "$PUID" -G node node
+fi
+
+# Update node user/group IDs if different from defaults
+CURRENT_UID=$(id -u node 2>/dev/null || echo "0")
+CURRENT_GID=$(id -g node 2>/dev/null || echo "0")
 
 if [ "$CURRENT_GID" != "$PGID" ]; then
-    echo "Updating nginx group ID to $PGID"
-    groupmod -o -g "$PGID" nginx
+    echo "Updating node group ID to $PGID"
+    groupmod -o -g "$PGID" node
 fi
 
 if [ "$CURRENT_UID" != "$PUID" ]; then
-    echo "Updating nginx user ID to $PUID"
-    usermod -o -u "$PUID" nginx
+    echo "Updating node user ID to $PUID"
+    usermod -o -u "$PUID" node
 fi
 
 # Set umask
 umask $UMASK
 
-# Fix permissions for nginx directories (only if needed to improve startup performance)
-# Check if any of the key directories need permission updates
-if [ "$(stat -c '%u' /var/cache/nginx 2>/dev/null)" != "$PUID" ] || \
-   [ "$(stat -c '%u' /usr/share/nginx/html 2>/dev/null)" != "$PUID" ]; then
-    echo "Fixing permissions for nginx directories..."
-    chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx/conf.d 2>/dev/null || true
-    chown -R nginx:nginx /usr/share/nginx/html 2>/dev/null || true
-fi
+# Ensure data directory exists and has correct permissions
+mkdir -p /data
+chown -R node:node /data /app
 
-# Execute the main command
-exec "$@"
+# Execute the main command as node user
+exec su-exec node:node "$@"
