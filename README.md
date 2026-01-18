@@ -93,3 +93,12 @@ For the best mobile experience:
 ## Data Storage
 
 All data is stored locally in your browser using localStorage. No data is sent to any server. To backup your data, you can export it from the browser's developer tools (Application > Local Storage).
+
+## Changelog
+
+For a detailed history of changes, features, and fixes, see [CHANGELOG.md](CHANGELOG.md).
+
+The changelog is automatically updated when pull requests are merged. Contributors should:
+- Use descriptive PR titles (they become changelog entries)
+- Add appropriate labels (`feature`, `bug`, `documentation`, etc.)
+- Follow conventional commit prefixes (`feat:`, `fix:`, `docs:`, etc.)
