@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  gsctracker:
+    # Build the image from the local Dockerfile
+    build: .
+    
+    # Alternative: use pre-built image (if published to Docker Hub)
+    # image: tokendad/gsctracker:latest
+    
+    # Container name - customize as needed
+    container_name: gsctracker
+    
+    # Restart policy options:
+    # - no: Do not restart automatically
+    # - always: Always restart if stopped
+    # - unless-stopped: Restart unless explicitly stopped
+    # - on-failure: Restart only on failure
+    restart: unless-stopped
+    
+    # Port mappings (HOST:CONTAINER)
+    # Change the host port (left side) to expose on a different port
+    ports:
+      - "8080:80"    # Default: Access app at http://localhost:8080
+      # - "3000:80"  # Alternative: Access at http://localhost:3000
+      # - "80:80"    # Alternative: Access at http://localhost (requires root/admin)
+    
+    # Environment variables
+    environment:
+      # PUID: User ID to run the container process
+      # Default: 1000 (typical first user on Linux)
+      # Find your PUID: run 'id -u' in terminal
+      - PUID=1000
+      
+      # PGID: Group ID to run the container process
+      # Default: 1000 (typical first user group on Linux)
+      # Find your PGID: run 'id -g' in terminal
+      - PGID=1000
+      
+      # UMASK: File creation mask for permissions
+      # Default: 022 (files: rw-r--r--, directories: rwxr-xr-x)
+      # Common values:
+      #   - 022: User read/write, group and others read-only
+      #   - 002: User and group read/write, others read-only
+      #   - 077: User read/write only, no group/others access
+      - UMASK=022
+      
+      # TZ: Timezone for the container
+      # Default: UTC
+      # Examples: America/New_York, Europe/London, Asia/Tokyo
+      # Full list: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+      - TZ=America/New_York
+    
+    # Volume mappings (HOST:CONTAINER)
+    # The /data volume is available for storing any persistent data
+    volumes:
+      - ./data:/data
+      # Examples of other volume configurations:
+      # - /path/on/host/data:/data          # Absolute path
+      # - ~/gsctracker/data:/data           # Home directory path
+      # - gsctracker-data:/data             # Named Docker volume
+      # - ./backups:/backups                # Additional volume for backups
+    
+    # Optional: Resource limits
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 256M
+    
+    # Optional: Health check
+    # healthcheck:
+    #   test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 10s
+    
+    # Optional: Logging configuration
+    # logging:
+    #   driver: "json-file"
+    #   options:
+    #     max-size: "10m"
+    #     max-file: "3"
+
+# Optional: Named volumes (uncomment if using named volumes above)
+# volumes:
+#   gsctracker-data:
+#     driver: local
