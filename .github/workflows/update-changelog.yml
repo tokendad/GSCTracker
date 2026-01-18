@@ -120,21 +120,16 @@ jobs:
           in_unreleased && $0 ~ "^### " category "$" {
             found_category = 1
             print
-            next
-          }
-
-          # Insert the entry after the category header if we found it and havent printed yet
-          in_unreleased && found_category && !printed && /^$/ {
             print entry
             printed = 1
             next
           }
 
-          # Insert before the next category if we found our category but hit another one
-          in_unreleased && found_category && !printed && /^### / {
-            print entry
-            print ""
-            printed = 1
+          # Skip empty lines right after category header
+          # if we just printed the entry
+          in_unreleased && found_category && printed && /^$/ {
+            print
+            next
           }
 
           # Print all other lines
