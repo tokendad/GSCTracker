@@ -78,7 +78,10 @@ For the best mobile experience:
 
 ## Technical Details
 
-- **Pure HTML/CSS/JavaScript**: No dependencies or build process required
+- **Backend**: Node.js with Express server
+- **Database**: SQLite (better-sqlite3) for persistent data storage
+- **Frontend**: Pure HTML/CSS/JavaScript
+- **API**: RESTful endpoints for CRUD operations
 - **Responsive Design**: Uses CSS Grid, Flexbox, and media queries
 - **Cross-Browser Compatible**: Works on all modern browsers
 - **Viewport Optimized**: Proper meta tags for mobile rendering
@@ -92,7 +95,7 @@ For the best mobile experience:
 
 ## Data Storage
 
-All data is stored locally in your browser using localStorage. No data is sent to any server. To backup your data, you can export it from the browser's developer tools (Application > Local Storage).
+All data is stored in a SQLite database (`gsctracker.db`) in the `/data` directory. The database is persistent across container restarts when using the Docker volume mount. The application uses a Node.js backend with Express to serve the web interface and provide REST API endpoints for data operations.
 
 ## Changelog
 

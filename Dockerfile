@@ -1,25 +1,35 @@
-FROM nginx:alpine
+FROM node:18-alpine
 
-# Install shadow package for usermod/groupmod support
-RUN apk add --no-cache shadow
+# Install shadow package for usermod/groupmod support and su-exec
+RUN apk add --no-cache shadow su-exec
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Create app directory
+WORKDIR /app
 
-# Copy static files
-COPY index.html /usr/share/nginx/html/
-COPY styles.css /usr/share/nginx/html/
-COPY script.js /usr/share/nginx/html/
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install --production
+
+# Create public directory
+RUN mkdir -p /app/public
+
+# Copy server and static files
+COPY server.js ./
+COPY index.html ./public/
+COPY styles.css ./public/
+COPY script.js ./public/
 
 # Create entrypoint script to handle PUID, PGID, and UMASK
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-# Set working directory
-WORKDIR /usr/share/nginx/html
+# Create data directory
+RUN mkdir -p /data
 
-# Expose default port
-EXPOSE 80
+# Expose port
+EXPOSE 3000
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["node", "server.js"]
