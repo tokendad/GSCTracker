@@ -36,6 +36,21 @@ A mobile-responsive web application for tracking Girl Scout Cookie sales. Design
 
 ## Usage
 
+### Using Docker (Recommended)
+
+The easiest way to run GSCTracker is using Docker:
+
+```bash
+# Start the application
+docker-compose up -d
+
+# Access at http://localhost:8080
+```
+
+For detailed Docker configuration options, see [docker_compose.md](docker_compose.md).
+
+### Without Docker
+
 1. Open `index.html` in any modern web browser (mobile or desktop)
 2. Fill out the "Record a Sale" form:
    - Select a cookie type

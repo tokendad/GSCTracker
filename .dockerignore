@@ -1,0 +1,44 @@
+# Git
+.git
+.gitignore
+.github
+
+# Documentation (excluded to reduce image size; can be accessed from repo)
+README.md
+docker_compose.md
+
+# Docker
+docker-compose.yml
+docker-compose.example.yml
+Dockerfile
+.dockerignore
+
+# Data
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temp files
+*.tmp
+*.temp
+/tmp/
