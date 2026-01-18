@@ -55,8 +55,17 @@ app.post('/api/sales', (req, res) => {
             return res.status(400).json({ error: 'Invalid sale data' });
         }
         
+        // Validate and sanitize customerName
+        const sanitizedCustomerName = (customerName && customerName.trim()) || 'Walk-in Customer';
+        
+        // Validate and use current date if not provided or invalid
+        let saleDate = date;
+        if (!saleDate || isNaN(new Date(saleDate).getTime())) {
+            saleDate = new Date().toISOString();
+        }
+        
         const stmt = db.prepare('INSERT INTO sales (cookieType, quantity, customerName, date) VALUES (?, ?, ?, ?)');
-        const result = stmt.run(cookieType, quantity, customerName || 'Walk-in Customer', date || new Date().toISOString());
+        const result = stmt.run(cookieType, quantity, sanitizedCustomerName, saleDate);
         
         const newSale = db.prepare('SELECT * FROM sales WHERE id = ?').get(result.lastInsertRowid);
         res.status(201).json(newSale);
