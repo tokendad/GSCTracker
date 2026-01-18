@@ -13,9 +13,14 @@ echo "  TZ: ${TZ:-UTC}"
 
 # Set timezone if specified (validate to prevent path traversal)
 if [ -n "$TZ" ]; then
-    # Remove any path traversal attempts and validate format (allow safe timezone characters)
-    CLEAN_TZ=$(echo "$TZ" | sed 's/\.\.//g' | sed 's/[^a-zA-Z0-9_\/+-]//g')
-    if [ -f "/usr/share/zoneinfo/$CLEAN_TZ" ]; then
+    # Remove path traversal attempts and validate format
+    # Strip any leading slashes to prevent absolute paths
+    CLEAN_TZ=$(echo "$TZ" | sed 's/^[\/]*//g' | sed 's/\.\.//g' | sed 's/[^a-zA-Z0-9_\/+-]//g')
+    
+    # Ensure it doesn't start with / after cleaning (double-check absolute path prevention)
+    if [ "${CLEAN_TZ:0:1}" = "/" ]; then
+        echo "Warning: Invalid timezone '$TZ' (absolute paths not allowed), using default (UTC)"
+    elif [ -f "/usr/share/zoneinfo/$CLEAN_TZ" ]; then
         ln -snf /usr/share/zoneinfo/$CLEAN_TZ /etc/localtime
         echo $CLEAN_TZ > /etc/timezone
         echo "Timezone set to: $CLEAN_TZ"
@@ -46,10 +51,12 @@ fi
 umask $UMASK
 
 # Fix permissions for nginx directories (only if needed to improve startup performance)
-if [ "$(stat -c '%u' /var/cache/nginx 2>/dev/null)" != "$PUID" ]; then
+# Check if any of the key directories need permission updates
+if [ "$(stat -c '%u' /var/cache/nginx 2>/dev/null)" != "$PUID" ] || \
+   [ "$(stat -c '%u' /usr/share/nginx/html 2>/dev/null)" != "$PUID" ]; then
     echo "Fixing permissions for nginx directories..."
-    chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx/conf.d
-    chown -R nginx:nginx /usr/share/nginx/html
+    chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx/conf.d 2>/dev/null || true
+    chown -R nginx:nginx /usr/share/nginx/html 2>/dev/null || true
 fi
 
 # Execute the main command
