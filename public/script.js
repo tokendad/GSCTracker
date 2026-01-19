@@ -23,11 +23,47 @@ const clearAllButton = document.getElementById('clearAll');
 
 // Initialize app
 async function init() {
+    setupNavigation();
     await loadSales();
     renderSales();
     updateSummary();
     updateBreakdown();
     setupEventListeners();
+}
+
+// Setup navigation
+function setupNavigation() {
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const screen = item.getAttribute('data-screen');
+            switchScreen(screen);
+        });
+    });
+    
+    // Set initial screen to individual sales
+    switchScreen('individual');
+}
+
+// Switch between screens
+function switchScreen(screenName) {
+    // Update active nav item
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.getAttribute('data-screen') === screenName) {
+            item.classList.add('active');
+        }
+    });
+    
+    // Update active screen
+    document.querySelectorAll('.screen').forEach(screen => {
+        screen.classList.remove('active');
+    });
+    
+    const activeScreen = document.getElementById(`${screenName}Screen`);
+    if (activeScreen) {
+        activeScreen.classList.add('active');
+    }
 }
 
 // Setup event listeners
