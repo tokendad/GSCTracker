@@ -6,8 +6,16 @@ const API_BASE_URL = '/api';
 // Price per box (can be adjusted)
 const PRICE_PER_BOX = 6;
 
+// Boxes per case (standard Girl Scout Cookie case)
+const BOXES_PER_CASE = 12;
+
 // Maximum photo file size in bytes (5MB)
 const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
+
+// Helper function to convert sale quantity to boxes
+function convertToBoxes(sale) {
+    return sale.unitType === 'case' ? sale.quantity * BOXES_PER_CASE : sale.quantity;
+}
 
 // Data arrays
 let sales = [];
@@ -278,10 +286,7 @@ function updateGoalDisplay() {
     const goalBoxes = profile.goalBoxes || 0;
     const goalAmount = profile.goalAmount || 0;
     // Calculate total boxes (converting cases to boxes where needed)
-    const totalBoxes = sales.reduce((sum, sale) => {
-        const boxes = sale.unitType === 'case' ? sale.quantity * 12 : sale.quantity;
-        return sum + boxes;
-    }, 0);
+    const totalBoxes = sales.reduce((sum, sale) => sum + convertToBoxes(sale), 0);
     
     goalBoxesDisplay.textContent = `${goalBoxes} boxes ($${goalAmount})`;
     
@@ -499,7 +504,7 @@ function renderSales() {
         const saleTypeBadge = sale.saleType === 'event' ? '<span class="sale-type-badge">Event</span>' : '';
         
         // Format unit type display
-        const unitDisplay = sale.unitType === 'case' ? `${sale.quantity} case${sale.quantity > 1 ? 's' : ''} (${sale.quantity * 12} boxes)` : `${sale.quantity} box${sale.quantity > 1 ? 'es' : ''}`;
+        const unitDisplay = sale.unitType === 'case' ? `${sale.quantity} case${sale.quantity > 1 ? 's' : ''} (${sale.quantity * BOXES_PER_CASE} boxes)` : `${sale.quantity} box${sale.quantity > 1 ? 'es' : ''}`;
         
         // Build additional details
         let additionalDetails = [];
@@ -577,20 +582,11 @@ function renderDonations() {
 // Update summary statistics
 function updateSummary() {
     // Calculate total boxes (converting cases to boxes where needed)
-    const totalBoxes = sales.reduce((sum, sale) => {
-        const boxes = sale.unitType === 'case' ? sale.quantity * 12 : sale.quantity;
-        return sum + boxes;
-    }, 0);
+    const totalBoxes = sales.reduce((sum, sale) => sum + convertToBoxes(sale), 0);
     
-    const individualBoxes = sales.filter(s => s.saleType === 'individual').reduce((sum, sale) => {
-        const boxes = sale.unitType === 'case' ? sale.quantity * 12 : sale.quantity;
-        return sum + boxes;
-    }, 0);
+    const individualBoxes = sales.filter(s => s.saleType === 'individual').reduce((sum, sale) => sum + convertToBoxes(sale), 0);
     
-    const eventBoxes = sales.filter(s => s.saleType === 'event').reduce((sum, sale) => {
-        const boxes = sale.unitType === 'case' ? sale.quantity * 12 : sale.quantity;
-        return sum + boxes;
-    }, 0);
+    const eventBoxes = sales.filter(s => s.saleType === 'event').reduce((sum, sale) => sum + convertToBoxes(sale), 0);
     
     const totalRevenue = totalBoxes * PRICE_PER_BOX;
     const totalDonationAmount = donations.reduce((sum, donation) => sum + donation.amount, 0);
@@ -612,7 +608,7 @@ function updateBreakdown() {
     // Calculate totals by cookie type (converting cases to boxes)
     const breakdown = {};
     sales.forEach(sale => {
-        const boxes = sale.unitType === 'case' ? sale.quantity * 12 : sale.quantity;
+        const boxes = convertToBoxes(sale);
         if (breakdown[sale.cookieType]) {
             breakdown[sale.cookieType] += boxes;
         } else {
