@@ -1,7 +1,7 @@
 FROM node:18-alpine
 
-# Install shadow package for usermod/groupmod support and su-exec
-RUN apk add --no-cache shadow su-exec
+# Install shadow package for usermod/groupmod support, su-exec, and tzdata for timezone support
+RUN apk add --no-cache shadow su-exec tzdata
 
 # Create app directory
 WORKDIR /app
@@ -17,6 +17,7 @@ RUN mkdir -p /app/public
 
 # Copy server and static files
 COPY server.js ./
+COPY logger.js ./
 COPY index.html ./public/
 COPY styles.css ./public/
 COPY script.js ./public/

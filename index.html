@@ -14,245 +14,317 @@
             <h1>🍪 Girl Scout Cookie Tracker</h1>
         </header>
 
+        <nav class="tab-nav">
+            <button class="tab-btn" data-view="profile">
+                <span class="tab-icon">👤</span>
+                <span class="tab-label">Profile</span>
+            </button>
+            <button class="tab-btn active" data-view="sales">
+                <span class="tab-icon">🍪</span>
+                <span class="tab-label">Individual</span>
+            </button>
+            <button class="tab-btn" data-view="events">
+                <span class="tab-icon">📅</span>
+                <span class="tab-label">Events</span>
+            </button>
+            <button class="tab-btn" data-view="settings">
+                <span class="tab-icon">⚙️</span>
+                <span class="tab-label">Settings</span>
+            </button>
+        </nav>
+
         <main>
-            <!-- Profile Section -->
-            <section class="profile-section">
-                <h2>Girl Scout Profile</h2>
-                <div class="profile-content">
-                    <div class="profile-photo-container">
-                        <img id="profilePhoto" src="" alt="Profile Photo" class="profile-photo" style="display:none;">
-                        <div id="profilePhotoPlaceholder" class="profile-photo-placeholder">📸</div>
-                        <input type="file" id="photoInput" accept="image/*" style="display:none;">
-                        <button id="uploadPhotoBtn" class="btn btn-secondary">Upload Photo</button>
-                    </div>
-                    <div class="profile-info">
-                        <div class="form-group">
-                            <label for="qrCodeUrl">Store QR Code URL</label>
-                            <input type="url" id="qrCodeUrl" placeholder="https://digitalcookie.girlscouts.org/...">
+            <!-- Dashboard View -->
+            <div id="view-dashboard" class="view-section">
+                <!-- Summary Section -->
+                <section class="summary-section">
+                    <h2>Sales Summary</h2>
+                    <div class="summary-card">
+                        <div class="summary-item">
+                            <span class="summary-label">Total Boxes Sold</span>
+                            <span class="summary-value" id="totalBoxes">0</span>
                         </div>
-                        <div class="qr-code-display" id="qrCodeDisplay" style="display:none;">
-                            <img id="qrCodeImage" src="" alt="Store QR Code">
+                        <div class="summary-item">
+                            <span class="summary-label">Individual Sales</span>
+                            <span class="summary-value" id="individualSales">0 boxes</span>
                         </div>
-                        <button id="updateQrBtn" class="btn btn-secondary">Update QR Code</button>
+                        <div class="summary-item">
+                            <span class="summary-label">Event Sales</span>
+                            <span class="summary-value" id="eventSales">0 boxes</span>
+                        </div>
+                        <div class="summary-item summary-revenue">
+                            <span class="summary-label">Total Revenue</span>
+                            <span class="summary-value" id="totalRevenue">$0</span>
+                        </div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <!-- Goal Section -->
-            <section class="goal-section">
-                <h2>Sales Goal</h2>
-                <div class="goal-inputs">
-                    <div class="form-group">
-                        <label for="goalBoxes">Goal (boxes)</label>
-                        <input type="number" id="goalBoxes" min="0" value="0" placeholder="e.g., 120">
-                        <small>Note: 12 boxes = 1 case</small>
-                    </div>
-                    <button id="setGoalBtn" class="btn btn-secondary">Set Goal</button>
-                </div>
-                <div class="goal-display">
-                    <div class="goal-item">
-                        <span class="goal-label">Goal</span>
-                        <span class="goal-value" id="goalBoxesDisplay">0 boxes ($0)</span>
-                    </div>
-                    <div class="goal-item">
-                        <span class="goal-label">Progress</span>
-                        <span class="goal-value" id="goalProgress">0%</span>
-                    </div>
-                    <div class="goal-progress-bar">
-                        <div class="goal-progress-fill" id="goalProgressFill"></div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Add Sale Form -->
-            <section class="add-sale-section">
-                <h2>Record a Sale</h2>
-                <form id="saleForm">
-                    <div class="form-group">
-                        <label for="cookieType">Cookie Type</label>
-                        <select id="cookieType" required>
-                            <option value="">Select a cookie...</option>
-                            <option value="Thin Mints">Thin Mints® ($6)</option>
-                            <option value="Samoas/Caramel deLites">Samoas® / Caramel deLites® ($6)</option>
-                            <option value="Tagalongs/Peanut Butter Patties">Tagalongs® / Peanut Butter Patties® ($6)</option>
-                            <option value="Trefoils/Shortbread">Trefoils® / Shortbread ($6)</option>
-                            <option value="Do-si-dos/Peanut Butter Sandwich">Do-si-dos® / Peanut Butter Sandwich ($6)</option>
-                            <option value="Lemon-Ups">Lemon-Ups® ($6)</option>
-                            <option value="Lemonades">Lemonades® ($6)</option>
-                            <option value="Adventurefuls">Adventurefuls® ($6)</option>
-                            <option value="Exploremores">Exploremores™ - NEW! ($6)</option>
-                            <option value="Toffee-tastic">Toffee-tastic® (Gluten-Free) ($6)</option>
-                            <option value="Caramel Chocolate Chip">Caramel Chocolate Chip (Gluten-Free) ($6)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="quantity">Quantity</label>
-                        <input type="number" id="quantity" min="1" value="1" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="unitType">Unit Type</label>
-                        <select id="unitType">
-                            <option value="box">Boxes</option>
-                            <option value="case">Cases (12 boxes)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="customerName">Customer Name (optional)</label>
-                        <input type="text" id="customerName" placeholder="e.g., Mrs. Smith">
-                    </div>
-                    <div class="form-group">
-                        <label for="customerAddress">Customer Address (optional)</label>
-                        <input type="text" id="customerAddress" placeholder="e.g., 123 Main St">
-                    </div>
-                    <div class="form-group">
-                        <label for="customerPhone">Customer Phone (optional)</label>
-                        <input type="tel" id="customerPhone" placeholder="e.g., (555) 123-4567">
-                    </div>
-                    <div class="form-group">
-                        <label for="amountCollected">Amount Collected ($)</label>
-                        <input type="number" id="amountCollected" min="0" step="0.01" value="0" placeholder="e.g., 36.00">
-                    </div>
-                    <div class="form-group">
-                        <label for="amountDue">Amount Due ($)</label>
-                        <input type="number" id="amountDue" min="0" step="0.01" value="0" placeholder="e.g., 0.00">
-                    </div>
-                    <div class="form-group">
-                        <label for="paymentMethod">Payment Method</label>
-                        <select id="paymentMethod">
-                            <option value="">Select payment method...</option>
-                            <option value="cash">Cash</option>
-                            <option value="check">Check</option>
-                            <option value="venmo">Venmo</option>
-                            <option value="zelle">Zelle</option>
-                            <option value="paypal">PayPal</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="saleType">Sale Type</label>
-                        <select id="saleType">
-                            <option value="individual">Individual Sale</option>
-                            <option value="event">Event Sale</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Add Sale</button>
-                </form>
-            </section>
-
-            <!-- Summary Section -->
-            <section class="summary-section">
-                <h2>Sales Summary</h2>
-                <div class="summary-card">
-                    <div class="summary-item">
-                        <span class="summary-label">Total Boxes Sold</span>
-                        <span class="summary-value" id="totalBoxes">0</span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="summary-label">Individual Sales</span>
-                        <span class="summary-value" id="individualSales">0 boxes</span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="summary-label">Event Sales</span>
-                        <span class="summary-value" id="eventSales">0 boxes</span>
-                    </div>
-                    <div class="summary-item summary-revenue">
-                        <span class="summary-label">Total Revenue</span>
-                        <span class="summary-value" id="totalRevenue">$0</span>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Donations Section -->
-            <section class="donations-section">
-                <h2>Donations</h2>
-                <form id="donationForm">
-                    <div class="form-group">
-                        <label for="donationAmount">Amount ($)</label>
-                        <input type="number" id="donationAmount" min="0.01" step="0.01" placeholder="e.g., 25.00" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="donorName">Donor Name (optional)</label>
-                        <input type="text" id="donorName" placeholder="e.g., Mr. Johnson">
-                    </div>
-                    <button type="submit" class="btn btn-primary">Add Donation</button>
-                </form>
-                <div class="donations-summary">
-                    <div class="summary-item">
-                        <span class="summary-label">Total Donations</span>
-                        <span class="summary-value" id="totalDonations">$0</span>
-                    </div>
-                </div>
-                <div id="donationsList" class="donations-list">
-                    <p class="empty-message">No donations recorded yet.</p>
-                </div>
-            </section>
-
-            <!-- Event Sales Section -->
-            <section class="event-sales-section">
-                <h2>Event Sales</h2>
-                <form id="eventForm">
-                    <div class="form-group">
-                        <label for="eventName">Event Name</label>
-                        <input type="text" id="eventName" placeholder="e.g., Walmart Cookie Booth" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="eventDate">Event Date</label>
-                        <input type="datetime-local" id="eventDate" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="eventDescription">Description (optional)</label>
-                        <textarea id="eventDescription" placeholder="Brief description of the event" rows="2"></textarea>
-                    </div>
-                    <div class="form-row">
+                <!-- Goal Section -->
+                <section class="goal-section">
+                    <h2>Sales Goal</h2>
+                    <div class="goal-inputs">
                         <div class="form-group">
-                            <label for="initialBoxes">Initial Boxes</label>
-                            <input type="number" id="initialBoxes" min="0" value="0" placeholder="0">
+                            <label for="goalBoxes">Goal (boxes)</label>
+                            <input type="number" id="goalBoxes" min="0" value="0" placeholder="e.g., 120">
+                            <small>Note: 12 boxes = 1 case</small>
+                        </div>
+                        <button id="setGoalBtn" class="btn btn-secondary">Set Goal</button>
+                    </div>
+                    <div class="goal-display">
+                        <div class="goal-item">
+                            <span class="goal-label">Goal</span>
+                            <span class="goal-value" id="goalBoxesDisplay">0 boxes ($0)</span>
+                        </div>
+                        <div class="goal-item">
+                            <span class="goal-label">Progress</span>
+                            <span class="goal-value" id="goalProgress">0%</span>
+                        </div>
+                        <div class="goal-progress-bar">
+                            <div class="goal-progress-fill" id="goalProgressFill"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Cookie Breakdown -->
+                <section class="breakdown-section">
+                    <h2>Cookie Breakdown</h2>
+                    <div id="cookieBreakdown" class="cookie-breakdown">
+                        <p class="empty-message">No data to display yet.</p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Sales View -->
+            <div id="view-sales" class="view-section hidden">
+                <!-- Add Sale Form -->
+                <section class="add-sale-section">
+                    <h2>Record a Sale</h2>
+                    <form id="saleForm">
+                        <div class="form-group">
+                            <label for="cookieType">Cookie Type</label>
+                            <select id="cookieType" required>
+                                <option value="">Select a cookie...</option>
+                                <option value="Thin Mints">Thin Mints® ($6)</option>
+                                <option value="Samoas/Caramel deLites">Samoas® / Caramel deLites® ($6)</option>
+                                <option value="Tagalongs/Peanut Butter Patties">Tagalongs® / Peanut Butter Patties® ($6)</option>
+                                <option value="Trefoils/Shortbread">Trefoils® / Shortbread ($6)</option>
+                                <option value="Do-si-dos/Peanut Butter Sandwich">Do-si-dos® / Peanut Butter Sandwich ($6)</option>
+                                <option value="Lemon-Ups">Lemon-Ups® ($6)</option>
+                                <option value="Lemonades">Lemonades® ($6)</option>
+                                <option value="Adventurefuls">Adventurefuls® ($6)</option>
+                                <option value="Exploremores">Exploremores™ - NEW! ($6)</option>
+                                <option value="Toffee-tastic">Toffee-tastic® (Gluten-Free) ($6)</option>
+                                <option value="Caramel Chocolate Chip">Caramel Chocolate Chip (Gluten-Free) ($6)</option>
+                            </select>
                         </div>
                         <div class="form-group">
-                            <label for="initialCases">Initial Cases</label>
-                            <input type="number" id="initialCases" min="0" value="0" placeholder="0">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="remainingBoxes">Remaining Boxes</label>
-                            <input type="number" id="remainingBoxes" min="0" value="0" placeholder="0">
+                            <label for="quantity">Quantity</label>
+                            <input type="number" id="quantity" min="1" value="1" required>
                         </div>
                         <div class="form-group">
-                            <label for="remainingCases">Remaining Cases</label>
-                            <input type="number" id="remainingCases" min="0" value="0" placeholder="0">
+                            <label for="unitType">Unit Type</label>
+                            <select id="unitType">
+                                <option value="box">Boxes</option>
+                                <option value="case">Cases (12 boxes)</option>
+                            </select>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="eventDonations">Donations Received ($)</label>
-                        <input type="number" id="eventDonations" min="0" step="0.01" value="0" placeholder="0.00">
-                        <small>Donations are tracked separately from sales</small>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Save Event</button>
-                </form>
-                <div id="eventsList" class="events-list">
-                    <p class="empty-message">No events recorded yet.</p>
-                </div>
-            </section>
+                        <div class="form-group">
+                            <label for="customerName">Customer Name (optional)</label>
+                            <input type="text" id="customerName" placeholder="e.g., Mrs. Smith">
+                        </div>
+                        <div class="form-group">
+                            <label for="customerAddress">Customer Address (optional)</label>
+                            <input type="text" id="customerAddress" placeholder="e.g., 123 Main St">
+                        </div>
+                        <div class="form-group">
+                            <label for="customerPhone">Customer Phone (optional)</label>
+                            <input type="tel" id="customerPhone" placeholder="e.g., (555) 123-4567">
+                        </div>
+                        <div class="form-group">
+                            <label for="amountCollected">Amount Collected ($)</label>
+                            <input type="number" id="amountCollected" min="0" step="0.01" value="0" placeholder="e.g., 36.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="amountDue">Amount Due ($)</label>
+                            <input type="number" id="amountDue" min="0" step="0.01" value="0" placeholder="e.g., 0.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="paymentMethod">Payment Method</label>
+                            <select id="paymentMethod">
+                                <option value="">Select payment method...</option>
+                                <option value="cash">Cash</option>
+                                <option value="check">Check</option>
+                                <option value="venmo">Venmo</option>
+                                <option value="zelle">Zelle</option>
+                                <option value="paypal">PayPal</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="saleType">Sale Type</label>
+                            <select id="saleType">
+                                <option value="individual">Individual Sale</option>
+                                <option value="event">Event Sale</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Sale</button>
+                    </form>
+                </section>
 
-            <!-- Sales List -->
-            <section class="sales-list-section">
-                <div class="section-header">
+                <!-- Sales List -->
+                <section class="sales-list-section">
                     <h2>Recent Sales</h2>
-                    <button id="clearAll" class="btn btn-secondary">Clear All</button>
-                </div>
-                <div id="salesList" class="sales-list">
-                    <p class="empty-message">No sales recorded yet. Add your first sale above!</p>
-                </div>
-            </section>
+                    <div id="salesList" class="sales-list">
+                        <p class="empty-message">No sales recorded yet. Add your first sale above!</p>
+                    </div>
+                </section>
+            </div>
 
-            <!-- Cookie Breakdown -->
-            <section class="breakdown-section">
-                <h2>Cookie Breakdown</h2>
-                <div id="cookieBreakdown" class="cookie-breakdown">
-                    <p class="empty-message">No data to display yet.</p>
-                </div>
-            </section>
+            <!-- Events View -->
+            <div id="view-events" class="view-section hidden">
+                <!-- Event Sales Section -->
+                <section class="event-sales-section">
+                    <h2>Event Sales</h2>
+                    <form id="eventForm">
+                        <div class="form-group">
+                            <label for="eventName">Event Name</label>
+                            <input type="text" id="eventName" placeholder="e.g., Walmart Cookie Booth" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="eventDate">Event Date</label>
+                            <input type="datetime-local" id="eventDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="eventDescription">Description (optional)</label>
+                            <textarea id="eventDescription" placeholder="Brief description of the event" rows="2"></textarea>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="initialBoxes">Initial Boxes</label>
+                                <input type="number" id="initialBoxes" min="0" value="0" placeholder="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="initialCases">Initial Cases</label>
+                                <input type="number" id="initialCases" min="0" value="0" placeholder="0">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="remainingBoxes">Remaining Boxes</label>
+                                <input type="number" id="remainingBoxes" min="0" value="0" placeholder="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="remainingCases">Remaining Cases</label>
+                                <input type="number" id="remainingCases" min="0" value="0" placeholder="0">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="eventDonations">Donations Received ($)</label>
+                            <input type="number" id="eventDonations" min="0" step="0.01" value="0" placeholder="0.00">
+                            <small>Donations are tracked separately from sales</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Event</button>
+                    </form>
+                    <div id="eventsList" class="events-list">
+                        <p class="empty-message">No events recorded yet.</p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Donations View -->
+            <div id="view-donations" class="view-section hidden">
+                <!-- Donations Section -->
+                <section class="donations-section">
+                    <h2>Donations</h2>
+                    <form id="donationForm">
+                        <div class="form-group">
+                            <label for="donationAmount">Amount ($)</label>
+                            <input type="number" id="donationAmount" min="0.01" step="0.01" placeholder="e.g., 25.00" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="donorName">Donor Name (optional)</label>
+                            <input type="text" id="donorName" placeholder="e.g., Mr. Johnson">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Donation</button>
+                    </form>
+                    <div class="donations-summary">
+                        <div class="summary-item">
+                            <span class="summary-label">Total Donations</span>
+                            <span class="summary-value" id="totalDonations">$0</span>
+                        </div>
+                    </div>
+                    <div id="donationsList" class="donations-list">
+                        <p class="empty-message">No donations recorded yet.</p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Profile View -->
+            <div id="view-profile" class="view-section hidden">
+                <!-- Profile Section -->
+                <section class="profile-section">
+                    <h2>Girl Scout Profile</h2>
+                    <div class="profile-content">
+                        <div class="profile-photo-container">
+                            <img id="profilePhoto" src="" alt="Profile Photo" class="profile-photo" style="display:none;">
+                            <div id="profilePhotoPlaceholder" class="profile-photo-placeholder">📸</div>
+                            <input type="file" id="photoInput" accept="image/*" style="display:none;">
+                            <button id="uploadPhotoBtn" class="btn btn-secondary">Upload Photo</button>
+                        </div>
+                        <div class="profile-info">
+                            <div class="form-group">
+                                <label for="qrCodeUrl">Store QR Code URL</label>
+                                <input type="url" id="qrCodeUrl" placeholder="https://digitalcookie.girlscouts.org/...">
+                            </div>
+                            <div class="qr-code-display" id="qrCodeDisplay" style="display:none;">
+                                <img id="qrCodeImage" src="" alt="Store QR Code">
+                            </div>
+                            <button id="updateQrBtn" class="btn btn-secondary">Update QR Code</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Settings View -->
+            <div id="view-settings" class="view-section hidden">
+                <section class="settings-section">
+                    <h2>Settings</h2>
+                    <div class="settings-group">
+                        <h3>Appearance</h3>
+                        <div class="theme-selector">
+                            <label>Theme</label>
+                            <div class="theme-options">
+                                <button class="theme-btn" data-theme="light">
+                                    <span class="theme-icon">☀️</span>
+                                    <span class="theme-label">Light</span>
+                                </button>
+                                <button class="theme-btn" data-theme="dark">
+                                    <span class="theme-icon">🌙</span>
+                                    <span class="theme-label">Dark</span>
+                                </button>
+                                <button class="theme-btn active" data-theme="system">
+                                    <span class="theme-icon">💻</span>
+                                    <span class="theme-label">System</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <h3>Import Data</h3>
+                        <div class="import-section">
+                            <label>Import Sales from XLSX</label>
+                            <p class="import-description">Import cookie orders from Digital Cookie export files (.xlsx format)</p>
+                            <div class="import-controls">
+                                <input type="file" id="importFile" accept=".xlsx" style="display:none;">
+                                <button id="selectFileBtn" class="btn btn-secondary import-btn">Select File</button>
+                                <span id="selectedFileName" class="selected-file"></span>
+                            </div>
+                            <button id="importBtn" class="btn btn-primary" disabled>Import Sales</button>
+                            <div id="importStatus" class="import-status"></div>
+                        </div>
+                    </div>
+                </section>
+            </div>
         </main>
 
         <footer>

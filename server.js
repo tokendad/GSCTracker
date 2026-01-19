@@ -4,7 +4,23 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
+const multer = require('multer');
+const XLSX = require('xlsx');
 const logger = require('./logger');
+
+// Configure multer for file uploads (memory storage)
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+            file.originalname.endsWith('.xlsx')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only .xlsx files are allowed'), false);
+        }
+    }
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -83,6 +99,14 @@ try {
         logger.info('Migration: Added saleType column to sales table');
     }
     
+    // Migration: Add paymentQrCodeUrl column to profile table if it doesn't exist
+    const profileTableInfo = db.prepare("PRAGMA table_info(profile)").all();
+    const hasPaymentQrCodeUrl = profileTableInfo.some(col => col.name === 'paymentQrCodeUrl');
+    if (!hasPaymentQrCodeUrl) {
+        db.exec(`ALTER TABLE profile ADD COLUMN paymentQrCodeUrl TEXT`);
+        logger.info('Migration: Added paymentQrCodeUrl column to profile table');
+    }
+    
     // Migration: Add new individual sales columns if they don't exist
     const columnsToAdd = [
         { name: 'customerAddress', type: 'TEXT', default: null },
@@ -90,7 +114,11 @@ try {
         { name: 'unitType', type: 'TEXT', default: "'box'" },
         { name: 'amountCollected', type: 'REAL', default: '0' },
         { name: 'amountDue', type: 'REAL', default: '0' },
-        { name: 'paymentMethod', type: 'TEXT', default: null }
+        { name: 'paymentMethod', type: 'TEXT', default: null },
+        { name: 'orderNumber', type: 'TEXT', default: null },
+        { name: 'orderType', type: 'TEXT', default: null },
+        { name: 'orderStatus', type: 'TEXT', default: null },
+        { name: 'customerEmail', type: 'TEXT', default: null }
     ];
     
     for (const column of columnsToAdd) {
@@ -196,17 +224,24 @@ app.post('/api/sales', (req, res) => {
         const validAmountDue = (typeof amountDue === 'number' && amountDue >= 0) ? amountDue : 0;
         const validPaymentMethod = paymentMethod || null;
         
+        // New order grouping fields
+        const sanitizedOrderNumber = (req.body.orderNumber && String(req.body.orderNumber)) || null;
+        const sanitizedOrderType = (req.body.orderType && String(req.body.orderType)) || null;
+        const sanitizedOrderStatus = (req.body.orderStatus && String(req.body.orderStatus)) || 'Pending';
+
         const stmt = db.prepare(`
             INSERT INTO sales (
                 cookieType, quantity, customerName, date, saleType,
                 customerAddress, customerPhone, unitType, 
-                amountCollected, amountDue, paymentMethod
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                amountCollected, amountDue, paymentMethod,
+                orderNumber, orderType, orderStatus
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         const result = stmt.run(
             cookieType, quantity, sanitizedCustomerName, saleDate, validSaleType,
             sanitizedCustomerAddress, sanitizedCustomerPhone, validUnitType,
-            validAmountCollected, validAmountDue, validPaymentMethod
+            validAmountCollected, validAmountDue, validPaymentMethod,
+            sanitizedOrderNumber, sanitizedOrderType, sanitizedOrderStatus
         );
         
         const newSale = db.prepare('SELECT * FROM sales WHERE id = ?').get(result.lastInsertRowid);
@@ -216,6 +251,53 @@ app.post('/api/sales', (req, res) => {
         // Log error without sensitive request body data
         logger.error('Error adding sale', { error: error.message, stack: error.stack });
         res.status(500).json({ error: 'Failed to add sale' });
+    }
+});
+
+// Update a sale
+app.put('/api/sales/:id', (req, res) => {
+    try {
+        const { id } = req.params;
+        const { orderStatus, amountCollected, amountDue } = req.body;
+
+        // Dynamic update query construction
+        const updates = [];
+        const values = [];
+
+        if (orderStatus !== undefined) {
+            updates.push('orderStatus = ?');
+            values.push(orderStatus);
+        }
+
+        if (amountCollected !== undefined) {
+            updates.push('amountCollected = ?');
+            values.push(amountCollected);
+        }
+
+        if (amountDue !== undefined) {
+            updates.push('amountDue = ?');
+            values.push(amountDue);
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ error: 'No fields to update' });
+        }
+
+        values.push(id);
+
+        const stmt = db.prepare(`UPDATE sales SET ${updates.join(', ')} WHERE id = ?`);
+        const result = stmt.run(...values);
+
+        if (result.changes === 0) {
+            return res.status(404).json({ error: 'Sale not found' });
+        }
+
+        const updatedSale = db.prepare('SELECT * FROM sales WHERE id = ?').get(id);
+        logger.info('Sale updated successfully', { saleId: id, updates });
+        res.json(updatedSale);
+    } catch (error) {
+        logger.error('Error updating sale', { error: error.message, stack: error.stack, saleId: req.params.id });
+        res.status(500).json({ error: 'Failed to update sale' });
     }
 });
 
@@ -265,7 +347,7 @@ app.get('/api/profile', (req, res) => {
 // Update profile
 app.put('/api/profile', (req, res) => {
     try {
-        const { photoData, qrCodeUrl, goalBoxes, goalAmount } = req.body;
+        const { photoData, qrCodeUrl, paymentQrCodeUrl, goalBoxes, goalAmount } = req.body;
         
         // Validate goalBoxes and goalAmount
         const validGoalBoxes = (typeof goalBoxes === 'number' && goalBoxes >= 0) ? goalBoxes : 0;
@@ -275,14 +357,22 @@ app.put('/api/profile', (req, res) => {
             UPDATE profile 
             SET photoData = COALESCE(?, photoData),
                 qrCodeUrl = COALESCE(?, qrCodeUrl),
+                paymentQrCodeUrl = COALESCE(?, paymentQrCodeUrl),
                 goalBoxes = ?,
                 goalAmount = ?
             WHERE id = 1
         `);
-        stmt.run(photoData, qrCodeUrl, validGoalBoxes, validGoalAmount);
+        stmt.run(photoData, qrCodeUrl, paymentQrCodeUrl, validGoalBoxes, validGoalAmount);
         
         const updatedProfile = db.prepare('SELECT * FROM profile WHERE id = 1').get();
-        logger.info('Profile updated successfully');
+        logger.info('Profile updated successfully', { 
+            updates: { 
+                hasPhoto: !!photoData, 
+                hasStoreQr: !!qrCodeUrl, 
+                hasPaymentQr: !!paymentQrCodeUrl, 
+                goalBoxes: validGoalBoxes 
+            } 
+        });
         res.json(updatedProfile);
     } catch (error) {
         logger.error('Error updating profile', { error: error.message, stack: error.stack });
@@ -515,6 +605,150 @@ app.delete('/api/events/:id', (req, res) => {
     } catch (error) {
         logger.error('Error deleting event', { error: error.message, stack: error.stack, eventId: req.params.id });
         res.status(500).json({ error: 'Failed to delete event' });
+    }
+});
+
+// Import sales from XLSX file
+app.post('/api/import', upload.single('file'), (req, res) => {
+    try {
+        if (!req.file) {
+            logger.warn('No file uploaded for import');
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const data = XLSX.utils.sheet_to_json(sheet);
+
+        if (data.length === 0) {
+            logger.warn('Empty XLSX file uploaded');
+            return res.status(400).json({ error: 'No data found in file' });
+        }
+
+        // Cookie type mapping from XLSX columns to our cookie names (Official Girl Scout cookies)
+        const cookieColumns = [
+            { xlsx: 'Thin Mints', db: 'Thin Mints' },
+            { xlsx: 'Samoas', db: 'Samoas' },
+            { xlsx: 'Caramel deLites', db: 'Samoas' },
+            { xlsx: 'Tagalongs', db: 'Tagalongs' },
+            { xlsx: 'Peanut Butter Patties', db: 'Tagalongs' },
+            { xlsx: 'Trefoils', db: 'Trefoils' },
+            { xlsx: 'Shortbread', db: 'Trefoils' },
+            { xlsx: 'Do-si-dos', db: 'Do-si-dos' },
+            { xlsx: 'Peanut Butter Sandwich', db: 'Do-si-dos' },
+            { xlsx: 'Lemon-Ups', db: 'Lemon-Ups' },
+            { xlsx: 'Adventurefuls', db: 'Adventurefuls' },
+            { xlsx: 'Exploremores', db: 'Exploremores' },
+            { xlsx: 'Toffee-tastic', db: 'Toffee-tastic' }
+        ];
+
+        const insertStmt = db.prepare(`
+            INSERT INTO sales (
+                cookieType, quantity, customerName, customerAddress, customerPhone,
+                date, saleType, unitType, orderNumber, orderType, orderStatus, customerEmail
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        let importedCount = 0;
+        let skippedCount = 0;
+
+        // Use a transaction for better performance
+        const importTransaction = db.transaction((rows) => {
+            for (const row of rows) {
+                // Get order details
+                const orderNumber = String(row['Order Number'] || '');
+                const orderDate = row['Order Date'];
+                const orderType = row['Order Type'] || '';
+                const orderStatus = row['Order Status'] || '';
+                const customerName = row['Deliver To'] || '';
+                const customerAddress = row['Delivery Address'] || '';
+                const customerPhone = row['Customer Phone'] || '';
+                const customerEmail = row['Customer Email'] || '';
+
+                // Convert Excel date serial to ISO string
+                let dateStr = new Date().toISOString();
+                if (orderDate) {
+                    if (typeof orderDate === 'number') {
+                        // Excel date serial number
+                        const excelEpoch = new Date(1899, 11, 30);
+                        const jsDate = new Date(excelEpoch.getTime() + orderDate * 24 * 60 * 60 * 1000);
+                        dateStr = jsDate.toISOString();
+                    } else if (typeof orderDate === 'string') {
+                        const parsedDate = new Date(orderDate);
+                        if (!isNaN(parsedDate.getTime())) {
+                            dateStr = parsedDate.toISOString();
+                        }
+                    }
+                }
+
+                // Determine sale type based on order type
+                let saleType = 'individual';
+                if (orderType.toLowerCase().includes('donation')) {
+                    saleType = 'donation';
+                }
+
+                // Check for donated cookies column
+                const donatedCookies = parseInt(row['Donated Cookies'] || row['Donated Cookies (DO NOT DELIVER)'] || 0);
+                if (donatedCookies > 0) {
+                    // Add donated cookies as a special entry
+                    insertStmt.run(
+                        'Donated Cookies',
+                        donatedCookies,
+                        customerName,
+                        customerAddress,
+                        customerPhone,
+                        dateStr,
+                        'donation',
+                        'box',
+                        orderNumber,
+                        orderType,
+                        orderStatus,
+                        customerEmail
+                    );
+                    importedCount++;
+                }
+
+                // Process each cookie type
+                for (const cookie of cookieColumns) {
+                    const quantity = parseInt(row[cookie.xlsx] || 0);
+                    if (quantity > 0) {
+                        insertStmt.run(
+                            cookie.db,
+                            quantity,
+                            customerName,
+                            customerAddress,
+                            customerPhone,
+                            dateStr,
+                            saleType,
+                            'box',
+                            orderNumber,
+                            orderType,
+                            orderStatus,
+                            customerEmail
+                        );
+                        importedCount++;
+                    }
+                }
+            }
+        });
+
+        importTransaction(data);
+
+        logger.info('XLSX import completed', {
+            filename: req.file.originalname,
+            totalRows: data.length,
+            importedSales: importedCount
+        });
+
+        res.json({
+            message: 'Import successful',
+            ordersProcessed: data.length,
+            salesImported: importedCount
+        });
+    } catch (error) {
+        logger.error('Error importing XLSX', { error: error.message, stack: error.stack });
+        res.status(500).json({ error: 'Failed to import file: ' + error.message });
     }
 });
 

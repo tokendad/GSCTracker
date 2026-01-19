@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Profile tab displaying scout photo, Store QR code, and Payment QR code
+- Payment QR code functionality in Settings for payment method display
+- Cookie details section on Profile with official Girl Scout cookie images and descriptions
+- Order grouping in sales list - orders grouped by customer name with clickable details
+- Order details modal showing customer info, cookie breakdown, and payment summary
+- Additional payment tracking in order details with save functionality
+- Multi-cookie order entry - Record a Sale form now supports multiple cookies per order
+- Cookie selection table with boxes and cases columns for each cookie type
+- XLSX import feature in Settings to import Digital Cookie export files
+- New database fields: orderNumber, orderType, orderStatus, customerEmail
+- Settings tab with theme switching (Light/Dark/System preference)
+- Manual theme control that persists across sessions via localStorage
 - Add Docker Hub publish workflow with manual trigger and nightly schedule ([#24](https://github.com/tokendad/GSCTracker/pull/24))
 - Add event sales tracking with inventory management and donations ([#22](https://github.com/tokendad/GSCTracker/pull/22))
 - Add individual sales tracking with customer contact info and payment details ([#21](https://github.com/tokendad/GSCTracker/pull/21))
@@ -19,6 +31,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive error logging with Winston, daily rotation, and colored output ([#16](https://github.com/tokendad/GSCTracker/pull/16))
 
 ### Changed
+- Redesigned tab navigation with 5 tabs: Profile, Summary, Individual, Events, Settings
+- Renamed Dashboard tab to "Sales Summary"
+- Updated Record a Sale form layout: Customer info first, then cookie selection table, then payment section
+- Updated cookie list to 9 official Girl Scout cookies: Thin Mints, Samoas, Tagalongs, Trefoils, Do-si-dos, Lemon-Ups, Adventurefuls, Exploremores, Toffee-tastic
+- Sales table now shows orders grouped by customer with order details on click
+- Orders with "Shipped" status auto-check as complete
+- Cookie import mapping updated to support regional cookie name variations
+- Move all documentation files to /docs folder
 - Use npm script for screenshot capture in workflow ([#25](https://github.com/tokendad/GSCTracker/pull/25))
 
 ### Deprecated
@@ -26,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Fixed
+- Fix top bar navigation to match PR#14 design - moved nav below header with 3 tabs (Profile, Individual, Events) using icons above text
 - Fix YAML syntax errors in changelog workflow ([#17](https://github.com/tokendad/GSCTracker/pull/17))
   - Resolved issues from 21 consecutive failed workflow runs between PR #7 (which created the workflow) and PR #17
   - Fixed YAML parsing errors: changed `'on':` to `on:` and corrected heredoc indentation in multiline script

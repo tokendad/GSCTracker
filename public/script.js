@@ -25,13 +25,10 @@ let profile = null;
 
 // DOM Elements
 const saleForm = document.getElementById('saleForm');
-const cookieTypeInput = document.getElementById('cookieType');
-const quantityInput = document.getElementById('quantity');
 const customerNameInput = document.getElementById('customerName');
 const saleTypeInput = document.getElementById('saleType');
 const customerAddressInput = document.getElementById('customerAddress');
 const customerPhoneInput = document.getElementById('customerPhone');
-const unitTypeInput = document.getElementById('unitType');
 const amountCollectedInput = document.getElementById('amountCollected');
 const amountDueInput = document.getElementById('amountDue');
 const paymentMethodInput = document.getElementById('paymentMethod');
@@ -43,6 +40,11 @@ const totalRevenueElement = document.getElementById('totalRevenue');
 const cookieBreakdownElement = document.getElementById('cookieBreakdown');
 const clearAllButton = document.getElementById('clearAll');
 
+// Cookie selection table elements
+const totalBoxesInputEl = document.getElementById('totalBoxesInput');
+const totalCasesInputEl = document.getElementById('totalCasesInput');
+const orderTotalAmountEl = document.getElementById('orderTotalAmount');
+
 // Profile elements
 const photoInput = document.getElementById('photoInput');
 const uploadPhotoBtn = document.getElementById('uploadPhotoBtn');
@@ -52,6 +54,20 @@ const qrCodeUrlInput = document.getElementById('qrCodeUrl');
 const updateQrBtn = document.getElementById('updateQrBtn');
 const qrCodeDisplay = document.getElementById('qrCodeDisplay');
 const qrCodeImage = document.getElementById('qrCodeImage');
+
+// Payment QR elements
+const paymentQrCodeUrlInput = document.getElementById('paymentQrCodeUrl');
+const updatePaymentQrBtn = document.getElementById('updatePaymentQrBtn');
+const paymentQrCodeDisplay = document.getElementById('paymentQrCodeDisplay');
+const paymentQrCodeImage = document.getElementById('paymentQrCodeImage');
+
+// Profile display elements (for Profile tab)
+const profilePhotoDisplay = document.getElementById('profilePhotoDisplay');
+const profilePhotoPlaceholderDisplay = document.getElementById('profilePhotoPlaceholderDisplay');
+const storeQrImageDisplay = document.getElementById('storeQrImageDisplay');
+const storeQrPlaceholder = document.getElementById('storeQrPlaceholder');
+const paymentQrImageDisplay = document.getElementById('paymentQrImageDisplay');
+const paymentQrPlaceholder = document.getElementById('paymentQrPlaceholder');
 
 // Goal elements
 const goalBoxesInput = document.getElementById('goalBoxes');
@@ -94,19 +110,24 @@ async function init() {
 // Setup event listeners
 function setupEventListeners() {
     saleForm.addEventListener('submit', handleAddSale);
-    clearAllButton.addEventListener('click', handleClearAll);
-    
+    if (clearAllButton) {
+        clearAllButton.addEventListener('click', handleClearAll);
+    }
+
     // Profile listeners
     uploadPhotoBtn.addEventListener('click', () => photoInput.click());
     photoInput.addEventListener('change', handlePhotoUpload);
     updateQrBtn.addEventListener('click', handleUpdateQrCode);
-    
+    if (updatePaymentQrBtn) {
+        updatePaymentQrBtn.addEventListener('click', handleUpdatePaymentQrCode);
+    }
+
     // Goal listeners
     setGoalBtn.addEventListener('click', handleSetGoal);
-    
+
     // Donation listeners
     donationForm.addEventListener('submit', handleAddDonation);
-    
+
     // Event listeners
     eventForm.addEventListener('submit', handleAddEvent);
 }
@@ -162,25 +183,81 @@ async function loadProfile() {
             throw new Error('Failed to fetch profile');
         }
         profile = await response.json();
-        
-        // Update UI with profile data
+
+        // Update Settings page UI with profile data
         if (profile.photoData) {
             profilePhoto.src = profile.photoData;
             profilePhoto.style.display = 'block';
             profilePhotoPlaceholder.style.display = 'none';
         }
-        
+
         if (profile.qrCodeUrl) {
             qrCodeUrlInput.value = profile.qrCodeUrl;
             generateQrCode(profile.qrCodeUrl);
         }
-        
+
+        // Load payment QR code URL
+        if (profile.paymentQrCodeUrl && paymentQrCodeUrlInput) {
+            paymentQrCodeUrlInput.value = profile.paymentQrCodeUrl;
+            generatePaymentQrCode(profile.paymentQrCodeUrl);
+        }
+
         if (profile.goalBoxes) {
             goalBoxesInput.value = profile.goalBoxes;
         }
+
+        // Update Profile tab display elements
+        updateProfileDisplay();
     } catch (error) {
         console.error('Error loading profile:', error);
-        profile = { id: 1, photoData: null, qrCodeUrl: null, goalBoxes: 0, goalAmount: 0 };
+        profile = { id: 1, photoData: null, qrCodeUrl: null, paymentQrCodeUrl: null, goalBoxes: 0, goalAmount: 0 };
+    }
+}
+
+// Update Profile tab display
+function updateProfileDisplay() {
+    // Update profile photo display
+    if (profile && profile.photoData && profilePhotoDisplay) {
+        profilePhotoDisplay.src = profile.photoData;
+        profilePhotoDisplay.style.display = 'block';
+        if (profilePhotoPlaceholderDisplay) {
+            profilePhotoPlaceholderDisplay.style.display = 'none';
+        }
+    } else if (profilePhotoDisplay) {
+        profilePhotoDisplay.style.display = 'none';
+        if (profilePhotoPlaceholderDisplay) {
+            profilePhotoPlaceholderDisplay.style.display = 'flex';
+        }
+    }
+
+    // Update store QR display
+    if (profile && profile.qrCodeUrl && storeQrImageDisplay) {
+        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(profile.qrCodeUrl)}`;
+        storeQrImageDisplay.src = qrApiUrl;
+        storeQrImageDisplay.style.display = 'block';
+        if (storeQrPlaceholder) {
+            storeQrPlaceholder.style.display = 'none';
+        }
+    } else if (storeQrImageDisplay) {
+        storeQrImageDisplay.style.display = 'none';
+        if (storeQrPlaceholder) {
+            storeQrPlaceholder.style.display = 'block';
+        }
+    }
+
+    // Update payment QR display
+    if (profile && profile.paymentQrCodeUrl && paymentQrImageDisplay) {
+        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(profile.paymentQrCodeUrl)}`;
+        paymentQrImageDisplay.src = qrApiUrl;
+        paymentQrImageDisplay.style.display = 'block';
+        if (paymentQrPlaceholder) {
+            paymentQrPlaceholder.style.display = 'none';
+        }
+    } else if (paymentQrImageDisplay) {
+        paymentQrImageDisplay.style.display = 'none';
+        if (paymentQrPlaceholder) {
+            paymentQrPlaceholder.style.display = 'block';
+        }
     }
 }
 
@@ -267,21 +344,88 @@ function generateQrCode(url) {
         new URL(url);
         // Use a QR code API service with proper encoding
         const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
-        
+
         // Add error handling for image loading
         qrCodeImage.onerror = () => {
             qrCodeDisplay.style.display = 'none';
             console.error('Failed to generate QR code');
         };
-        
+
         qrCodeImage.onload = () => {
             qrCodeDisplay.style.display = 'block';
         };
-        
+
         qrCodeImage.src = qrCodeApiUrl;
     } catch (error) {
         console.error('Invalid URL for QR code:', error);
         qrCodeDisplay.style.display = 'none';
+    }
+}
+
+// Handle Payment QR code update
+async function handleUpdatePaymentQrCode() {
+    const paymentQrCodeUrl = paymentQrCodeUrlInput.value.trim();
+
+    if (!paymentQrCodeUrl) {
+        alert('Please enter a payment QR code URL');
+        return;
+    }
+
+    // Validate URL format
+    try {
+        const urlObj = new URL(paymentQrCodeUrl);
+        if (urlObj.protocol !== 'https:' && urlObj.protocol !== 'http:') {
+            alert('Please enter a valid HTTP or HTTPS URL');
+            return;
+        }
+    } catch (error) {
+        alert('Please enter a valid URL');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/profile`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentQrCodeUrl })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to update payment QR code');
+        }
+
+        await loadProfile();
+        showFeedback('Payment QR code updated!');
+    } catch (error) {
+        console.error('Error updating payment QR code:', error);
+        alert('Error updating payment QR code. Please try again.');
+    }
+}
+
+// Generate Payment QR code using external service
+function generatePaymentQrCode(url) {
+    if (!paymentQrCodeImage || !paymentQrCodeDisplay) return;
+
+    // Validate URL before generating QR code
+    try {
+        new URL(url);
+        // Use a QR code API service with proper encoding
+        const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+
+        // Add error handling for image loading
+        paymentQrCodeImage.onerror = () => {
+            paymentQrCodeDisplay.style.display = 'none';
+            console.error('Failed to generate payment QR code');
+        };
+
+        paymentQrCodeImage.onload = () => {
+            paymentQrCodeDisplay.style.display = 'block';
+        };
+
+        paymentQrCodeImage.src = qrCodeApiUrl;
+    } catch (error) {
+        console.error('Invalid URL for payment QR code:', error);
+        paymentQrCodeDisplay.style.display = 'none';
     }
 }
 
@@ -334,65 +478,139 @@ function updateGoalDisplay() {
 // Handle add sale form submission
 async function handleAddSale(e) {
     e.preventDefault();
-    
-    const cookieType = cookieTypeInput.value;
-    const quantity = parseInt(quantityInput.value);
-    const customerName = customerNameInput.value.trim();
+
+    const customerName = customerNameInput.value.trim() || 'Walk-in Customer';
     const saleType = saleTypeInput.value;
     const customerAddress = customerAddressInput.value.trim();
     const customerPhone = customerPhoneInput.value.trim();
-    const unitType = unitTypeInput.value;
     const amountCollected = parseFloat(amountCollectedInput.value) || 0;
     const amountDue = parseFloat(amountDueInput.value) || 0;
     const paymentMethod = paymentMethodInput.value;
-    
-    if (!cookieType || quantity < 1) {
-        alert('Please fill in all required fields.');
+
+    // Collect all cookie quantities from the table
+    const qtyInputs = document.querySelectorAll('.qty-input');
+    const cookieEntries = [];
+
+    qtyInputs.forEach(input => {
+        const qty = parseInt(input.value) || 0;
+        if (qty > 0) {
+            cookieEntries.push({
+                cookieType: input.dataset.cookie,
+                quantity: qty,
+                unitType: input.dataset.unit
+            });
+        }
+    });
+
+    if (cookieEntries.length === 0) {
+        alert('Please enter at least one cookie quantity.');
         return;
     }
-    
-    const sale = {
-        cookieType,
-        quantity,
-        customerName,
-        saleType,
-        customerAddress,
-        customerPhone,
-        unitType,
-        amountCollected,
-        amountDue,
-        paymentMethod,
-        date: new Date().toISOString()
-    };
-    
+
+    // Generate a unique order number for this batch
+    const orderNumber = `MAN-${Date.now()}`;
+    const saleDate = new Date().toISOString();
+
     try {
-        const response = await fetch(`${API_BASE_URL}/sales`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(sale)
+        // Create a sale record for each cookie entry
+        const salePromises = cookieEntries.map(entry => {
+            const sale = {
+                cookieType: entry.cookieType,
+                quantity: entry.quantity,
+                customerName,
+                saleType,
+                customerAddress,
+                customerPhone,
+                unitType: entry.unitType,
+                amountCollected: 0, // Will set on first entry only
+                amountDue: 0,
+                paymentMethod,
+                orderNumber,
+                orderType: 'Manual',
+                date: saleDate
+            };
+            return sale;
         });
-        
-        if (!response.ok) {
-            throw new Error('Failed to add sale');
+
+        // Set payment info on first entry only (to avoid duplicate counting)
+        if (salePromises.length > 0) {
+            salePromises[0].amountCollected = amountCollected;
+            salePromises[0].amountDue = amountDue;
         }
-        
+
+        // Submit all sales
+        for (const sale of salePromises) {
+            const response = await fetch(`${API_BASE_URL}/sales`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(sale)
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to add sale');
+            }
+        }
+
         await loadSales();
         renderSales();
         updateSummary();
         updateBreakdown();
         updateGoalDisplay();
-        
+
         // Reset form
         saleForm.reset();
-        
+        resetCookieTable();
+
         // Show feedback
-        showFeedback('Sale added successfully!');
+        showFeedback(`Order added with ${cookieEntries.length} cookie type(s)!`);
     } catch (error) {
         console.error('Error adding sale:', error);
         alert('Error adding sale. Please try again.');
     }
+}
+
+// Reset cookie selection table
+function resetCookieTable() {
+    const qtyInputs = document.querySelectorAll('.qty-input');
+    qtyInputs.forEach(input => {
+        input.value = 0;
+    });
+    updateCookieTableTotals();
+}
+
+// Update cookie table totals
+function updateCookieTableTotals() {
+    const qtyInputs = document.querySelectorAll('.qty-input');
+    let totalBoxes = 0;
+    let totalCases = 0;
+
+    qtyInputs.forEach(input => {
+        const qty = parseInt(input.value) || 0;
+        if (input.dataset.unit === 'box') {
+            totalBoxes += qty;
+        } else if (input.dataset.unit === 'case') {
+            totalCases += qty;
+        }
+    });
+
+    // Calculate total boxes (including cases converted)
+    const totalBoxesAll = totalBoxes + (totalCases * BOXES_PER_CASE);
+    const totalAmount = totalBoxesAll * PRICE_PER_BOX;
+
+    if (totalBoxesInputEl) totalBoxesInputEl.textContent = totalBoxes;
+    if (totalCasesInputEl) totalCasesInputEl.textContent = totalCases;
+    if (orderTotalAmountEl) orderTotalAmountEl.textContent = `$${totalAmount.toFixed(2)}`;
+}
+
+// Setup cookie table event listeners
+function setupCookieTableListeners() {
+    const qtyInputs = document.querySelectorAll('.qty-input');
+    qtyInputs.forEach(input => {
+        input.addEventListener('input', updateCookieTableTotals);
+        input.addEventListener('change', updateCookieTableTotals);
+    });
 }
 
 // Handle delete sale
@@ -659,66 +877,325 @@ function renderEvents() {
     });
 }
 
-// Render sales list
+// Helper to generate a unique key for grouping sales into an order
+function getOrderKey(sale) {
+    // Use orderNumber if available, otherwise group by customer name + date
+    if (sale.orderNumber) {
+        return `order_${sale.orderNumber}`;
+    }
+    // Fallback: group by customer name and date (same day)
+    const dateStr = new Date(sale.date).toISOString().split('T')[0];
+    return `manual_${sale.customerName}_${dateStr}`;
+}
+
+// Render sales list grouped by customer/order
 function renderSales() {
-    if (sales.length === 0) {
+    // Filter to individual sales only
+    const individualSales = sales.filter(s => s.saleType === 'individual');
+
+    if (individualSales.length === 0) {
         salesList.innerHTML = '<p class="empty-message">No sales recorded yet. Add your first sale above!</p>';
         return;
     }
-    
-    salesList.innerHTML = sales.map(sale => {
-        const date = new Date(sale.date);
+
+    // Group sales by order
+    const orders = {};
+    individualSales.forEach(sale => {
+        const key = getOrderKey(sale);
+        if (!orders[key]) {
+            orders[key] = {
+                key: key,
+                customerName: sale.customerName || 'Walk-in Customer',
+                date: sale.date,
+                orderType: sale.orderType || 'Manual',
+                orderStatus: sale.orderStatus || 'Pending',
+                items: [],
+                totalBoxes: 0
+            };
+        }
+        orders[key].items.push(sale);
+        orders[key].totalBoxes += convertToBoxes(sale);
+
+        // If any item has Shipped status, mark the whole order as shipped
+        if (sale.orderType && sale.orderType.toLowerCase().includes('shipped')) {
+            orders[key].orderStatus = 'Shipped';
+        }
+        if (sale.orderStatus === 'Shipped' || sale.orderStatus === 'Delivered') {
+            orders[key].orderStatus = sale.orderStatus;
+        }
+    });
+
+    // Sort orders by date (newest first)
+    const sortedOrders = Object.values(orders).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Build table HTML
+    let html = `
+        <div class="sales-table-container">
+            <table class="sales-table">
+                <thead>
+                    <tr>
+                        <th>Customer Name</th>
+                        <th>Total Boxes</th>
+                        <th>Order Date</th>
+                        <th>Order Type</th>
+                        <th>Order Complete</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    sortedOrders.forEach(order => {
+        const date = new Date(order.date);
         const formattedDate = date.toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+            year: 'numeric'
         });
-        
-        const saleTypeBadge = sale.saleType === 'event' ? '<span class="sale-type-badge">Event</span>' : '';
-        
-        // Format unit type display
-        const unitDisplay = sale.unitType === 'case' ? `${sale.quantity} case${sale.quantity > 1 ? 's' : ''} (${sale.quantity * BOXES_PER_CASE} boxes)` : `${sale.quantity} box${sale.quantity > 1 ? 'es' : ''}`;
-        
-        // Build additional details
-        let additionalDetails = [];
-        if (sale.customerAddress) {
-            additionalDetails.push(`📍 ${sale.customerAddress}`);
+
+        // Check if order is shipped or delivered
+        const isShipped = order.orderType && order.orderType.toLowerCase().includes('shipped');
+        const isComplete = order.orderStatus === 'Shipped' || order.orderStatus === 'Delivered' || isShipped;
+
+        html += `
+            <tr class="${isComplete ? 'order-complete' : ''}" data-order-key="${order.key}">
+                <td class="customer-name">
+                    <a href="#" onclick="showOrderDetails('${order.key}'); return false;">${order.customerName}</a>
+                </td>
+                <td>${order.totalBoxes}</td>
+                <td>${formattedDate}</td>
+                <td>${order.orderType}</td>
+                <td>
+                    <input type="checkbox"
+                        ${isComplete ? 'checked' : ''}
+                        ${isShipped ? 'disabled title="Shipped orders are automatically complete"' : ''}
+                        onchange="handleOrderComplete('${order.key}', this.checked)">
+                </td>
+            </tr>
+        `;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    salesList.innerHTML = html;
+}
+
+// Show order details when clicking on customer name
+function showOrderDetails(orderKey) {
+    // Find all sales for this order
+    const orderSales = sales.filter(s => getOrderKey(s) === orderKey);
+
+    if (orderSales.length === 0) return;
+
+    const firstSale = orderSales[0];
+    const totalBoxes = orderSales.reduce((sum, s) => sum + convertToBoxes(s), 0);
+
+    // Calculate payment totals
+    const totalCollected = orderSales.reduce((sum, s) => sum + (s.amountCollected || 0), 0);
+    const totalDue = orderSales.reduce((sum, s) => sum + (s.amountDue || 0), 0);
+    const orderTotal = totalBoxes * PRICE_PER_BOX;
+    const remainingBalance = orderTotal - totalCollected;
+
+    // Group cookies by type
+    const cookieBreakdown = {};
+    orderSales.forEach(sale => {
+        const boxes = convertToBoxes(sale);
+        if (cookieBreakdown[sale.cookieType]) {
+            cookieBreakdown[sale.cookieType] += boxes;
+        } else {
+            cookieBreakdown[sale.cookieType] = boxes;
         }
-        if (sale.customerPhone) {
-            additionalDetails.push(`📞 ${sale.customerPhone}`);
-        }
-        if (sale.amountCollected > 0 || sale.amountDue > 0) {
-            const collectedDisplay = sale.amountCollected > 0 ? `Collected: $${sale.amountCollected.toFixed(2)}` : '';
-            const dueDisplay = sale.amountDue > 0 ? `Due: $${sale.amountDue.toFixed(2)}` : '';
-            const paymentInfo = [collectedDisplay, dueDisplay].filter(x => x).join(' • ');
-            if (paymentInfo) {
-                additionalDetails.push(`💵 ${paymentInfo}`);
-            }
-        }
-        if (sale.paymentMethod) {
-            additionalDetails.push(`Payment: ${sale.paymentMethod}`);
-        }
-        
-        const additionalDetailsHtml = additionalDetails.length > 0 
-            ? `<div class="sale-additional-details">${additionalDetails.join(' • ')}</div>` 
-            : '';
-        
-        return `
-            <div class="sale-item">
-                <div class="sale-info">
-                    <div class="sale-cookie">${sale.cookieType} ${saleTypeBadge}</div>
-                    <div class="sale-details">
-                        ${unitDisplay} • ${sale.customerName} • ${formattedDate}
-                    </div>
-                    ${additionalDetailsHtml}
+    });
+
+    // Build cookie list HTML
+    let cookieListHtml = '';
+    Object.entries(cookieBreakdown).forEach(([cookieType, qty]) => {
+        cookieListHtml += `<tr><td>${cookieType}</td><td>${qty}</td></tr>`;
+    });
+
+    // Show details in a modal-like section
+    const detailsHtml = `
+        <div class="order-details-overlay" onclick="closeOrderDetails()">
+            <div class="order-details-modal" onclick="event.stopPropagation()">
+                <div class="order-details-header">
+                    <h3>Order Details</h3>
+                    <button class="btn-close" onclick="closeOrderDetails()">&times;</button>
                 </div>
-                <div class="sale-actions">
-                    <button class="btn-delete" onclick="handleDeleteSale(${sale.id})">Delete</button>
+                <div class="order-details-content">
+                    <div class="detail-section">
+                        <h4>Customer Information</h4>
+                        <p><strong>Name:</strong> ${firstSale.customerName || 'N/A'}</p>
+                        <p><strong>Address:</strong> ${firstSale.customerAddress || 'N/A'}</p>
+                        <p><strong>Phone:</strong> ${firstSale.customerPhone || 'N/A'}</p>
+                        ${firstSale.customerEmail ? `<p><strong>Email:</strong> ${firstSale.customerEmail}</p>` : ''}
+                    </div>
+                    <div class="detail-section">
+                        <h4>Order Information</h4>
+                        <p><strong>Order Type:</strong> ${firstSale.orderType || 'Manual'}</p>
+                        <p><strong>Status:</strong> ${firstSale.orderStatus || 'Pending'}</p>
+                        <p><strong>Payment Method:</strong> ${firstSale.paymentMethod || 'N/A'}</p>
+                        ${firstSale.orderNumber ? `<p><strong>Order #:</strong> ${firstSale.orderNumber}</p>` : ''}
+                    </div>
+                    <div class="detail-section">
+                        <h4>Cookies Ordered (${totalBoxes} boxes total)</h4>
+                        <table class="cookie-detail-table">
+                            <thead>
+                                <tr><th>Cookie Type</th><th>Boxes</th></tr>
+                            </thead>
+                            <tbody>
+                                ${cookieListHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="detail-section">
+                        <h4>Payment</h4>
+                        <div class="payment-summary">
+                            <div class="payment-row">
+                                <span>Order Total:</span>
+                                <span class="payment-value">$${orderTotal.toFixed(2)}</span>
+                            </div>
+                            <div class="payment-row">
+                                <span>Payment Received:</span>
+                                <span class="payment-value payment-received">$${totalCollected.toFixed(2)}</span>
+                            </div>
+                            <div class="payment-row ${remainingBalance > 0 ? 'payment-due-highlight' : ''}">
+                                <span>Balance Due:</span>
+                                <span class="payment-value payment-due">$${remainingBalance.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <div class="additional-payment-section">
+                            <label for="additionalPayment">Add Payment Collected:</label>
+                            <div class="additional-payment-input">
+                                <span class="currency-prefix">$</span>
+                                <input type="number" id="additionalPayment" min="0" step="0.01" value="0" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="detail-actions">
+                        <button class="btn btn-secondary" onclick="deleteOrder('${orderKey}')">Delete Order</button>
+                        <button class="btn btn-primary" onclick="saveOrderPayment('${orderKey}')">Save Changes</button>
+                    </div>
                 </div>
             </div>
-        `;
-    }).join('');
+        </div>
+    `;
+
+    // Append to body
+    const detailsDiv = document.createElement('div');
+    detailsDiv.id = 'orderDetailsContainer';
+    detailsDiv.innerHTML = detailsHtml;
+    document.body.appendChild(detailsDiv);
+}
+
+// Save order payment changes
+async function saveOrderPayment(orderKey) {
+    const additionalPaymentInput = document.getElementById('additionalPayment');
+    const additionalPayment = parseFloat(additionalPaymentInput.value) || 0;
+
+    if (additionalPayment <= 0) {
+        showFeedback('No additional payment to save');
+        closeOrderDetails();
+        return;
+    }
+
+    const orderSales = sales.filter(s => getOrderKey(s) === orderKey);
+    if (orderSales.length === 0) return;
+
+    // Add the additional payment to the first sale in the order
+    const firstSale = orderSales[0];
+    const newAmountCollected = (firstSale.amountCollected || 0) + additionalPayment;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/sales/${firstSale.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amountCollected: newAmountCollected })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to update payment');
+        }
+
+        // Reload and re-render
+        await loadSales();
+        renderSales();
+        closeOrderDetails();
+        showFeedback(`Payment of $${additionalPayment.toFixed(2)} recorded!`);
+    } catch (error) {
+        console.error('Error saving payment:', error);
+        alert('Failed to save payment. Please try again.');
+    }
+}
+
+// Close order details modal
+function closeOrderDetails() {
+    const container = document.getElementById('orderDetailsContainer');
+    if (container) {
+        container.remove();
+    }
+}
+
+// Handle order complete checkbox change
+async function handleOrderComplete(orderKey, isChecked) {
+    const orderSales = sales.filter(s => getOrderKey(s) === orderKey);
+    const newStatus = isChecked ? 'Delivered' : 'Pending';
+
+    try {
+        // Update all sales in this order
+        const updatePromises = orderSales.map(sale =>
+            fetch(`${API_BASE_URL}/sales/${sale.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderStatus: newStatus })
+            })
+        );
+
+        await Promise.all(updatePromises);
+
+        // Reload and re-render
+        await loadSales();
+        renderSales();
+        showFeedback(`Order marked as ${newStatus}`);
+    } catch (error) {
+        console.error('Error updating order status:', error);
+        alert('Failed to update order status. Please try again.');
+        // Reload to reset checkbox state
+        await loadSales();
+        renderSales();
+    }
+}
+
+// Delete an entire order
+async function deleteOrder(orderKey) {
+    if (!confirm('Are you sure you want to delete this entire order?')) {
+        return;
+    }
+
+    const orderSales = sales.filter(s => getOrderKey(s) === orderKey);
+
+    try {
+        const deletePromises = orderSales.map(sale =>
+            fetch(`${API_BASE_URL}/sales/${sale.id}`, {
+                method: 'DELETE'
+            })
+        );
+
+        await Promise.all(deletePromises);
+
+        closeOrderDetails();
+        await loadSales();
+        renderSales();
+        updateSummary();
+        updateBreakdown();
+        updateGoalDisplay();
+        showFeedback('Order deleted successfully');
+    } catch (error) {
+        console.error('Error deleting order:', error);
+        alert('Failed to delete order. Please try again.');
+    }
 }
 
 // Render donations list
@@ -862,9 +1339,195 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// Switch View (Global)
+function switchView(viewId) {
+    const views = document.querySelectorAll('.view-section');
+    const tabButtons = document.querySelectorAll('.tab-btn');
+
+    // Hide all views
+    views.forEach(view => view.classList.add('hidden'));
+
+    // Show selected view
+    const selectedView = document.getElementById('view-' + viewId);
+    if (selectedView) {
+        selectedView.classList.remove('hidden');
+    }
+
+    // Update tab buttons
+    tabButtons.forEach(btn => {
+        if (btn.dataset.view === viewId) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    // Save preference
+    localStorage.setItem('lastView', viewId);
+}
+
+// Navigation Logic
+function setupNavigation() {
+    const tabButtons = document.querySelectorAll('.tab-btn');
+
+    // Add event listeners
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            switchView(btn.dataset.view);
+        });
+    });
+
+    // Load last view or default to profile
+    let lastView = localStorage.getItem('lastView') || 'profile';
+    switchView(lastView);
+}
+
+// Theme Management
+function setupTheme() {
+    const themeButtons = document.querySelectorAll('.theme-btn');
+    const savedTheme = localStorage.getItem('theme') || 'system';
+
+    // Apply saved theme on load
+    applyTheme(savedTheme);
+    updateThemeButtons(savedTheme);
+
+    // Listen for system preference changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        const currentTheme = localStorage.getItem('theme') || 'system';
+        if (currentTheme === 'system') {
+            applyTheme('system');
+        }
+    });
+
+    // Add event listeners for theme buttons
+    themeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const theme = btn.dataset.theme;
+            localStorage.setItem('theme', theme);
+            applyTheme(theme);
+            updateThemeButtons(theme);
+            showFeedback(`Theme changed to ${theme}`);
+        });
+    });
+}
+
+function applyTheme(theme) {
+    const html = document.documentElement;
+
+    if (theme === 'system') {
+        // Use system preference
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        html.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    } else {
+        html.setAttribute('data-theme', theme);
+    }
+}
+
+function updateThemeButtons(activeTheme) {
+    const themeButtons = document.querySelectorAll('.theme-btn');
+    themeButtons.forEach(btn => {
+        if (btn.dataset.theme === activeTheme) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+}
+
+// Import Management
+function setupImport() {
+    const importFileInput = document.getElementById('importFile');
+    const selectFileBtn = document.getElementById('selectFileBtn');
+    const importBtn = document.getElementById('importBtn');
+    const selectedFileName = document.getElementById('selectedFileName');
+    const importStatus = document.getElementById('importStatus');
+
+    if (!importFileInput || !selectFileBtn || !importBtn) return;
+
+    selectFileBtn.addEventListener('click', () => {
+        importFileInput.click();
+    });
+
+    importFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            selectedFileName.textContent = file.name;
+            importBtn.disabled = false;
+            importStatus.className = 'import-status';
+            importStatus.textContent = '';
+        } else {
+            selectedFileName.textContent = '';
+            importBtn.disabled = true;
+        }
+    });
+
+    importBtn.addEventListener('click', async () => {
+        const file = importFileInput.files[0];
+        if (!file) {
+            showFeedback('Please select a file first');
+            return;
+        }
+
+        // Show loading state
+        importBtn.disabled = true;
+        importStatus.className = 'import-status loading';
+        importStatus.textContent = 'Importing...';
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/import`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Import failed');
+            }
+
+            // Show success
+            importStatus.className = 'import-status success';
+            importStatus.textContent = `Successfully imported ${result.salesImported} sales from ${result.ordersProcessed} orders`;
+
+            // Reload sales data
+            await loadSales();
+            renderSales();
+            updateSummary();
+            updateBreakdown();
+            updateGoalDisplay();
+
+            showFeedback('Import successful!');
+
+            // Reset file input
+            importFileInput.value = '';
+            selectedFileName.textContent = '';
+            importBtn.disabled = true;
+
+        } catch (error) {
+            console.error('Import error:', error);
+            importStatus.className = 'import-status error';
+            importStatus.textContent = `Error: ${error.message}`;
+            importBtn.disabled = false;
+        }
+    });
+}
+
 // Initialize app when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', () => {
+        init();
+        setupNavigation();
+        setupTheme();
+        setupImport();
+        setupCookieTableListeners();
+    });
 } else {
     init();
+    setupNavigation();
+    setupTheme();
+    setupImport();
+    setupCookieTableListeners();
 }

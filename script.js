@@ -41,7 +41,6 @@ const individualSalesElement = document.getElementById('individualSales');
 const eventSalesElement = document.getElementById('eventSales');
 const totalRevenueElement = document.getElementById('totalRevenue');
 const cookieBreakdownElement = document.getElementById('cookieBreakdown');
-const clearAllButton = document.getElementById('clearAll');
 
 // Profile elements
 const photoInput = document.getElementById('photoInput');
@@ -94,8 +93,7 @@ async function init() {
 // Setup event listeners
 function setupEventListeners() {
     saleForm.addEventListener('submit', handleAddSale);
-    clearAllButton.addEventListener('click', handleClearAll);
-    
+
     // Profile listeners
     uploadPhotoBtn.addEventListener('click', () => photoInput.click());
     photoInput.addEventListener('change', handlePhotoUpload);
@@ -416,36 +414,6 @@ async function handleDeleteSale(id) {
         } catch (error) {
             console.error('Error deleting sale:', error);
             alert('Error deleting sale. Please try again.');
-        }
-    }
-}
-
-// Handle clear all sales
-async function handleClearAll() {
-    if (sales.length === 0) {
-        alert('No sales to clear.');
-        return;
-    }
-    
-    if (confirm('Are you sure you want to clear all sales? This cannot be undone.')) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/sales`, {
-                method: 'DELETE'
-            });
-            
-            if (!response.ok) {
-                throw new Error('Failed to clear sales');
-            }
-            
-            await loadSales();
-            renderSales();
-            updateSummary();
-            updateBreakdown();
-            updateGoalDisplay();
-            showFeedback('All sales cleared.');
-        } catch (error) {
-            console.error('Error clearing sales:', error);
-            alert('Error clearing sales. Please try again.');
         }
     }
 }
@@ -862,9 +830,194 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// Import Management
+function setupImport() {
+    const importFileInput = document.getElementById('importFile');
+    const selectFileBtn = document.getElementById('selectFileBtn');
+    const importBtn = document.getElementById('importBtn');
+    const selectedFileName = document.getElementById('selectedFileName');
+    const importStatus = document.getElementById('importStatus');
+
+    if (!importFileInput || !selectFileBtn || !importBtn) return;
+
+    selectFileBtn.addEventListener('click', () => {
+        importFileInput.click();
+    });
+
+    importFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            selectedFileName.textContent = file.name;
+            importBtn.disabled = false;
+            importStatus.className = 'import-status';
+            importStatus.textContent = '';
+        } else {
+            selectedFileName.textContent = '';
+            importBtn.disabled = true;
+        }
+    });
+
+    importBtn.addEventListener('click', async () => {
+        const file = importFileInput.files[0];
+        if (!file) {
+            showFeedback('Please select a file first');
+            return;
+        }
+
+        // Show loading state
+        importBtn.disabled = true;
+        importStatus.className = 'import-status loading';
+        importStatus.textContent = 'Importing...';
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/import`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Import failed');
+            }
+
+            // Show success
+            importStatus.className = 'import-status success';
+            importStatus.textContent = `Successfully imported ${result.salesImported} sales from ${result.ordersProcessed} orders`;
+
+            // Reload sales data
+            await loadSales();
+            renderSales();
+            updateSummary();
+            updateBreakdown();
+            updateGoalDisplay();
+
+            showFeedback('Import successful!');
+
+            // Reset file input
+            importFileInput.value = '';
+            selectedFileName.textContent = '';
+            importBtn.disabled = true;
+
+        } catch (error) {
+            console.error('Import error:', error);
+            importStatus.className = 'import-status error';
+            importStatus.textContent = `Error: ${error.message}`;
+            importBtn.disabled = false;
+        }
+    });
+}
+
+// Theme Management
+function setupTheme() {
+    const themeButtons = document.querySelectorAll('.theme-btn');
+    const savedTheme = localStorage.getItem('theme') || 'system';
+
+    // Apply saved theme on load
+    applyTheme(savedTheme);
+    updateThemeButtons(savedTheme);
+
+    // Listen for system preference changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        const currentTheme = localStorage.getItem('theme') || 'system';
+        if (currentTheme === 'system') {
+            applyTheme('system');
+        }
+    });
+
+    // Add event listeners for theme buttons
+    themeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const theme = btn.dataset.theme;
+            localStorage.setItem('theme', theme);
+            applyTheme(theme);
+            updateThemeButtons(theme);
+            showFeedback(`Theme changed to ${theme}`);
+        });
+    });
+}
+
+function applyTheme(theme) {
+    const html = document.documentElement;
+
+    if (theme === 'system') {
+        // Use system preference
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        html.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    } else {
+        html.setAttribute('data-theme', theme);
+    }
+}
+
+function updateThemeButtons(activeTheme) {
+    const themeButtons = document.querySelectorAll('.theme-btn');
+    themeButtons.forEach(btn => {
+        if (btn.dataset.theme === activeTheme) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+}
+
+// Navigation Logic
+function setupNavigation() {
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const views = document.querySelectorAll('.view-section');
+
+    function switchView(viewId) {
+        // Hide all views
+        views.forEach(view => view.classList.add('hidden'));
+
+        // Show selected view
+        const selectedView = document.getElementById('view-' + viewId);
+        if (selectedView) {
+            selectedView.classList.remove('hidden');
+        }
+
+        // Update tab buttons
+        tabButtons.forEach(btn => {
+            if (btn.dataset.view === viewId) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        // Save preference
+        localStorage.setItem('lastView', viewId);
+    }
+
+    // Add event listeners
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            switchView(btn.dataset.view);
+        });
+    });
+
+    // Load last view or default to sales (Individual tab)
+    let lastView = localStorage.getItem('lastView') || 'sales';
+    // Handle legacy view names that no longer exist in nav
+    if (lastView === 'dashboard' || lastView === 'donations') {
+        lastView = 'sales';
+    }
+    switchView(lastView);
+}
+
 // Initialize app when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', () => {
+        init();
+        setupNavigation();
+        setupTheme();
+        setupImport();
+    });
 } else {
     init();
+    setupNavigation();
+    setupTheme();
+    setupImport();
 }
