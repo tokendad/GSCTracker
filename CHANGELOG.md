@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Add Docker Hub publish workflow with manual trigger and nightly schedule ([#24](https://github.com/tokendad/GSCTracker/pull/24))
 - Add event sales tracking with inventory management and donations ([#22](https://github.com/tokendad/GSCTracker/pull/22))
 - Add individual sales tracking with customer contact info and payment details ([#21](https://github.com/tokendad/GSCTracker/pull/21))
 - Add Girl Scout profile, goals, sales categorization, and donation tracking ([#20](https://github.com/tokendad/GSCTracker/pull/20))
