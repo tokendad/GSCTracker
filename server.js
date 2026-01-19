@@ -57,7 +57,8 @@ app.use((req, res, next) => {
     
     res.on('finish', () => {
         const duration = Date.now() - startTime;
-        const logLevel = res.statusCode >= 400 ? 'warn' : 'info';
+        // Use explicit conditionals for log level to prevent injection
+        const logLevel = res.statusCode >= 500 ? 'error' : (res.statusCode >= 400 ? 'warn' : 'info');
         logger[logLevel]('HTTP Request', {
             method: req.method,
             path: req.path,
@@ -115,7 +116,8 @@ app.post('/api/sales', (req, res) => {
         logger.info('Sale added successfully', { saleId: newSale.id, cookieType, quantity });
         res.status(201).json(newSale);
     } catch (error) {
-        logger.error('Error adding sale', { error: error.message, stack: error.stack, body: req.body });
+        // Log error without sensitive request body data
+        logger.error('Error adding sale', { error: error.message, stack: error.stack });
         res.status(500).json({ error: 'Failed to add sale' });
     }
 });

@@ -90,7 +90,12 @@ const logger = winston.createLogger({
     exitOnError: false
 });
 
-// Log initialization
-logger.info('Logger initialized', { logDirectory: LOG_DIR });
+// Log initialization (wrapped in try-catch for safety)
+try {
+    logger.info('Logger initialized', { logDirectory: LOG_DIR });
+} catch (err) {
+    // Fallback to console if logger fails
+    console.error('Logger initialization failed:', err);
+}
 
 module.exports = logger;
