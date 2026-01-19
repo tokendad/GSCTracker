@@ -4,6 +4,7 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
+const logger = require('./logger');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,27 +14,61 @@ const DB_PATH = path.join(DATA_DIR, 'gsctracker.db');
 // Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
+    logger.info('Created data directory', { path: DATA_DIR });
 }
 
 // Initialize database
-const db = new Database(DB_PATH);
+let db;
+try {
+    db = new Database(DB_PATH);
+    logger.info('Database initialized successfully', { path: DB_PATH });
+} catch (error) {
+    logger.error('Failed to initialize database', { error: error.message, stack: error.stack, path: DB_PATH });
+    process.exit(1);
+}
 
 // Create sales table if it doesn't exist
-db.exec(`
-    CREATE TABLE IF NOT EXISTS sales (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        cookieType TEXT NOT NULL,
-        quantity INTEGER NOT NULL,
-        customerName TEXT NOT NULL,
-        date TEXT NOT NULL
-    )
-`);
+try {
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS sales (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            cookieType TEXT NOT NULL,
+            quantity INTEGER NOT NULL,
+            customerName TEXT NOT NULL,
+            date TEXT NOT NULL
+        )
+    `);
+    logger.info('Database tables initialized');
+} catch (error) {
+    logger.error('Failed to create database tables', { error: error.message, stack: error.stack });
+    process.exit(1);
+}
 
 // Rate limiting middleware
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // Limit each IP to 100 requests per windowMs
     message: 'Too many requests from this IP, please try again later.'
+});
+
+// Request logging middleware
+app.use((req, res, next) => {
+    const startTime = Date.now();
+    
+    res.on('finish', () => {
+        const duration = Date.now() - startTime;
+        // Use explicit conditionals for log level to prevent injection
+        const logLevel = res.statusCode >= 500 ? 'error' : (res.statusCode >= 400 ? 'warn' : 'info');
+        logger[logLevel]('HTTP Request', {
+            method: req.method,
+            path: req.path,
+            statusCode: res.statusCode,
+            duration: `${duration}ms`,
+            ip: req.ip
+        });
+    });
+    
+    next();
 });
 
 // Middleware
@@ -50,7 +85,7 @@ app.get('/api/sales', (req, res) => {
         const sales = db.prepare('SELECT * FROM sales ORDER BY id DESC').all();
         res.json(sales);
     } catch (error) {
-        console.error('Error fetching sales:', error);
+        logger.error('Error fetching sales', { error: error.message, stack: error.stack });
         res.status(500).json({ error: 'Failed to fetch sales' });
     }
 });
@@ -61,6 +96,7 @@ app.post('/api/sales', (req, res) => {
         const { cookieType, quantity, customerName, date } = req.body;
         
         if (!cookieType || !quantity || quantity < 1) {
+            logger.warn('Invalid sale data received', { cookieType, quantity });
             return res.status(400).json({ error: 'Invalid sale data' });
         }
         
@@ -77,9 +113,11 @@ app.post('/api/sales', (req, res) => {
         const result = stmt.run(cookieType, quantity, sanitizedCustomerName, saleDate);
         
         const newSale = db.prepare('SELECT * FROM sales WHERE id = ?').get(result.lastInsertRowid);
+        logger.info('Sale added successfully', { saleId: newSale.id, cookieType, quantity });
         res.status(201).json(newSale);
     } catch (error) {
-        console.error('Error adding sale:', error);
+        // Log error without sensitive request body data
+        logger.error('Error adding sale', { error: error.message, stack: error.stack });
         res.status(500).json({ error: 'Failed to add sale' });
     }
 });
@@ -92,12 +130,14 @@ app.delete('/api/sales/:id', (req, res) => {
         const result = stmt.run(id);
         
         if (result.changes === 0) {
+            logger.warn('Attempted to delete non-existent sale', { saleId: id });
             return res.status(404).json({ error: 'Sale not found' });
         }
         
+        logger.info('Sale deleted successfully', { saleId: id });
         res.json({ message: 'Sale deleted successfully' });
     } catch (error) {
-        console.error('Error deleting sale:', error);
+        logger.error('Error deleting sale', { error: error.message, stack: error.stack, saleId: req.params.id });
         res.status(500).json({ error: 'Failed to delete sale' });
     }
 });
@@ -105,10 +145,11 @@ app.delete('/api/sales/:id', (req, res) => {
 // Clear all sales
 app.delete('/api/sales', (req, res) => {
     try {
-        db.prepare('DELETE FROM sales').run();
+        const result = db.prepare('DELETE FROM sales').run();
+        logger.warn('All sales cleared', { deletedCount: result.changes });
         res.json({ message: 'All sales cleared successfully' });
     } catch (error) {
-        console.error('Error clearing sales:', error);
+        logger.error('Error clearing sales', { error: error.message, stack: error.stack });
         res.status(500).json({ error: 'Failed to clear sales' });
     }
 });
@@ -127,8 +168,9 @@ function shutdown(signal) {
     }
     isShuttingDown = true;
     
-    console.log(`${signal} received, closing database...`);
+    logger.info(`${signal} received, closing database...`);
     db.close();
+    logger.info('Database closed successfully');
     process.exitCode = 0;
 }
 
@@ -136,6 +178,6 @@ process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`GSCTracker server running on port ${PORT}`);
-    console.log(`Database location: ${DB_PATH}`);
+    logger.info(`GSCTracker server running on port ${PORT}`);
+    logger.info(`Database location: ${DB_PATH}`);
 });

@@ -14,4 +14,4 @@ services:
       - TZ=UTC
       - DATA_DIR=/data
     volumes:
-      - ./data:/data
+      - ./data:/data  # Includes database and logs subdirectory

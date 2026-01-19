@@ -65,7 +65,7 @@ fi
 umask $UMASK
 
 # Ensure data directory exists and has correct permissions
-mkdir -p /data
+mkdir -p /data /data/logs
 chown -R node:node /data /app
 
 # Execute the main command as node user
