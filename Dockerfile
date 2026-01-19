@@ -28,6 +28,9 @@ RUN chmod +x /docker-entrypoint.sh
 # Create data directory
 RUN mkdir -p /data
 
+# Create logs directory
+RUN mkdir -p /data/logs
+
 # Expose port
 EXPOSE 3000
 
