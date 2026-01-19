@@ -12,15 +12,10 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install --production
 
-# Create public directory
-RUN mkdir -p /app/public
-
 # Copy server and static files
 COPY server.js ./
 COPY logger.js ./
-COPY index.html ./public/
-COPY styles.css ./public/
-COPY script.js ./public/
+COPY public/ ./public/
 
 # Create entrypoint script to handle PUID, PGID, and UMASK
 COPY docker-entrypoint.sh /docker-entrypoint.sh
