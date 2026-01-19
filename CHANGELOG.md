@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive error logging with Winston, daily rotation, and colored output ([#16](https://github.com/tokendad/GSCTracker/pull/16))
 
 ### Changed
+- Use npm script for screenshot capture in workflow ([#25](https://github.com/tokendad/GSCTracker/pull/25))
 
 ### Deprecated
 
