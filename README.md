@@ -6,12 +6,16 @@ A mobile-responsive web application for tracking Girl Scout Cookie sales. Design
 ## Features
 
 - 📱 **Mobile-First Design**: Optimized for phone screens with responsive layout
-- 🍪 **Track Cookie Sales**: Record sales by cookie type, quantity, and customer
-- 📊 **Sales Summary**: View total boxes sold and number of sales at a glance
+- 🍪 **Track Cookie Sales**: Record sales by cookie type, quantity, customer, and payment status
+- 🔄 **Digital Cookie Sync**: Automatically import orders from the Girl Scouts Digital Cookie platform
+- 💳 **Payment Methods**: Manage multiple payment options (Venmo, PayPal, etc.) with dynamic QR code generation
+- 📅 **Event Management**: Track booth sales, inventory, and donations with support for editing event details
+- 📊 **Sales Summary**: View total boxes sold, revenue, and donation stats at a glance
 - 📈 **Cookie Breakdown**: See which cookies are selling best
-- 💾 **Local Storage**: Data persists between sessions using browser local storage
+- 👤 **Scout Profile**: Personalize with photo, goal tracking, and shareable store/payment links
+- 💾 **Persistent Data**: SQLite database storage for reliable data management
 - 🌓 **Dark Mode Support**: Automatically adapts to system dark mode preference
-- ✨ **Touch-Optimized**: Large touch targets and smooth mobile interactions
+- ⚙️ **Data Management**: Import/Export capabilities and bulk deletion tools
 
 ## Screenshots
 
@@ -55,18 +59,36 @@ docker-compose up -d
 # Access at http://localhost:8080
 ```
 
-For detailed Docker configuration options, see [docker_compose.md](docker_compose.md).
+For detailed Docker configuration options, see [docs/docker_compose.md](docs/docker_compose.md).
 
-### Without Docker
+### Local Development (Without Docker)
 
-1. Open `index.html` in any modern web browser (mobile or desktop)
-2. Fill out the "Record a Sale" form:
-   - Select a cookie type
-   - Enter the quantity of boxes sold
-   - Optionally add a customer name
-3. Click "Add Sale" to record the transaction
-4. View your sales summary, recent sales list, and cookie breakdown
-5. Delete individual sales or clear all data as needed
+Since GSCTracker uses a Node.js backend with SQLite, you cannot just open `index.html`.
+
+1. **Install Dependencies:**
+   ```bash
+   npm install
+   ```
+2. **Start the Server:**
+   ```bash
+   npm start
+   ```
+3. **Access the App:**
+   Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Configuration
+
+### Digital Cookie Sync
+To enable automatic order imports:
+1. Go to the **Settings** tab.
+2. Enter your Digital Cookie orders page URL, email, and password.
+3. Click "Test Connection" to verify.
+4. Click "Sync Now" to import recent orders.
+
+### Payment Methods
+1. Go to **Settings**.
+2. Add your payment providers (e.g., Venmo, PayPal) and their profile URLs.
+3. The **Profile** tab will automatically generate and display QR codes for each method.
 
 ## Mobile Access
 
