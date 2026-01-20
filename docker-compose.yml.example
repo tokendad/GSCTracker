@@ -1,9 +1,9 @@
-version: '3.8'
+1812version: '3.8'
 
 services:
   gsctracker:
     build: . # Alternative if published to Docker Hub
-  # image: tokendad/gsctracker:latest
+  # image: neuman1812/gsctracker:latest
     container_name: gsctrackerdev
     restart: unless-stopped
     ports:
