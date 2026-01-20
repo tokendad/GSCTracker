@@ -428,15 +428,34 @@ class DigitalCookieScraper {
                             const cellText = cell.textContent.trim();
                             const header = headers[cellIndex] || '';
 
-                            if (header.includes('cookie') && header.includes('pkg')) {
+                            if (header.includes('order') && header.includes('#')) {
+                                // Handle "Order #" column - extract order number from cell
+                                if (!order.orderNumber) {
+                                    const orderNumMatch = cellText.match(/(\d{8,12})/);
+                                    if (orderNumMatch) {
+                                        order.orderNumber = orderNumMatch[1];
+                                    }
+                                }
+                            } else if (header.includes('cookie') && header.includes('pkg')) {
                                 order.totalBoxes = extractNumber(cellText);
                             } else if (header.includes('deliver to') || header.includes('name') || header.includes('customer')) {
                                 if (!order.customerName) order.customerName = cellText;
+                            } else if (header.includes('paid by') || header.includes('paid')) {
+                                // Handle "Paid By" column - could contain customer name or payment method
+                                if (header.includes('paid by')) {
+                                    if (!order.customerName) order.customerName = cellText;
+                                    order.isPaid = true;
+                                } else if (header.includes('payment')) {
+                                    order.paymentMethod = cellText;
+                                    if (cellText && cellText.toLowerCase() !== 'unpaid') {
+                                        order.isPaid = true;
+                                    }
+                                }
                             } else if (header.includes('address') || header.includes('delivery address')) {
                                 order.customerAddress = cellText;
                             } else if (header.includes('date') && !header.includes('initial')) {
                                 order.orderDate = parseDate(cellText);
-                            } else if (header.includes('payment') || header.includes('paid')) {
+                            } else if (header.includes('payment')) {
                                 order.paymentMethod = cellText;
                                 if (cellText && cellText.toLowerCase() !== 'unpaid') {
                                     order.isPaid = true;
