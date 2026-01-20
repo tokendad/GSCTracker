@@ -455,11 +455,20 @@ class DigitalCookieScraper {
                             links.forEach(link => {
                                 const href = link.getAttribute('href') || '';
                                 const onclick = link.getAttribute('onclick') || '';
+                                const linkText = link.textContent.trim();
 
                                 // Extract order ID from URLs
                                 const orderMatch = href.match(/order[\/=](\d+)/i) || onclick.match(/order[^\d]*(\d+)/i);
                                 if (orderMatch && !order.orderNumber) {
                                     order.orderNumber = orderMatch[1];
+                                }
+                                
+                                // Extract order ID from link text (e.g., "Order #163717824" or just "163717824")
+                                if (!order.orderNumber) {
+                                    const linkTextMatch = linkText.match(/(?:order\s*#?\s*)?(\d{8,12})/i);
+                                    if (linkTextMatch) {
+                                        order.orderNumber = linkTextMatch[1];
+                                    }
                                 }
 
                                 // Capture detail page link
@@ -468,9 +477,9 @@ class DigitalCookieScraper {
                                 }
                             });
 
-                            // Check for order number in cell text
+                            // Check for order number in cell text (standalone or with label)
                             if (!order.orderNumber) {
-                                const orderNumMatch = cellText.match(/^(\d{8,12})$/);
+                                const orderNumMatch = cellText.match(/(?:order\s*#?\s*)?(\d{8,12})/i);
                                 if (orderNumMatch) {
                                     order.orderNumber = orderNumMatch[1];
                                 }
@@ -482,8 +491,12 @@ class DigitalCookieScraper {
                             const cellTexts = Array.from(cells).map(c => c.textContent.trim());
 
                             cellTexts.forEach((text, idx) => {
-                                if (/^\d{8,12}$/.test(text) && !order.orderNumber) {
-                                    order.orderNumber = text;
+                                // Look for 8-12 digit order numbers (more flexible pattern)
+                                if (/\b(\d{8,12})\b/.test(text) && !order.orderNumber) {
+                                    const match = text.match(/\b(\d{8,12})\b/);
+                                    if (match) {
+                                        order.orderNumber = match[1];
+                                    }
                                 } else if (/^\d{1,3}$/.test(text) && !order.totalBoxes) {
                                     const num = parseInt(text, 10);
                                     if (num > 0 && num < 100) {
@@ -557,7 +570,9 @@ class DigitalCookieScraper {
             const extractedOrders = basicOrders.orders || [];
             logger.info('Initial order extraction complete', {
                 orderCount: extractedOrders.length,
-                tablesFound: basicOrders.debug?.tablesFound || 0
+                tablesFound: basicOrders.debug?.tablesFound || 0,
+                ordersWithNumbers: extractedOrders.filter(o => o.orderNumber).length,
+                ordersWithoutNumbers: extractedOrders.filter(o => !o.orderNumber).length
             });
 
             // Filter orders that need detail scraping (have order numbers)
@@ -571,6 +586,22 @@ class DigitalCookieScraper {
 
                 // Process orders in parallel batches using multiple tabs
                 await this.scrapeOrderDetailsParallel(ordersNeedingDetails);
+            } else {
+                logger.warn('No orders with order numbers found for detail scraping');
+            }
+            
+            // Log orders without numbers for debugging
+            const ordersWithoutNumbers = extractedOrders.filter(o => !o.orderNumber);
+            if (ordersWithoutNumbers.length > 0) {
+                logger.warn('Found orders without order numbers (will not get detailed cookie info)', {
+                    count: ordersWithoutNumbers.length,
+                    samples: ordersWithoutNumbers.slice(0, 3).map(o => ({
+                        customerName: o.customerName,
+                        totalBoxes: o.totalBoxes,
+                        orderDate: o.orderDate,
+                        tableSection: o.tableSection
+                    }))
+                });
             }
 
             // Log final results
