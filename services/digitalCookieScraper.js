@@ -758,7 +758,7 @@ class DigitalCookieScraper {
                     'Thin Mints', 'Samoas', 'Caramel deLites', 'Tagalongs', 'Peanut Butter Patties',
                     'Do-si-dos', 'Peanut Butter Sandwich', 'Trefoils', 'Shortbread',
                     'Girl Scout S\'mores', 'S\'mores', 'Lemon-Ups', 'Lemonades',
-                    'Adventurefuls', 'Raspberry Rally', 'Toffee-tastic', 'Toast-Yay'
+                    'Adventurefuls', 'Raspberry Rally', 'Toffee-tastic', 'Toast-Yay', 'Exploremores'
                 ];
 
                 // Look for cookies in tables
@@ -767,22 +767,49 @@ class DigitalCookieScraper {
                     const rows = table.querySelectorAll('tr');
                     rows.forEach(row => {
                         const rowText = row.textContent;
+                        
+                        // Skip generic "assorted" or summary rows
+                        const lowerRowText = rowText.toLowerCase();
+                        if (lowerRowText.includes('assorted') || 
+                            lowerRowText.includes('total') ||
+                            lowerRowText.includes('subtotal')) {
+                            return;
+                        }
+                        
                         cookieNames.forEach(cookieName => {
-                            if (rowText.toLowerCase().includes(cookieName.toLowerCase())) {
+                            // Use word boundary matching to avoid false positives
+                            const cookiePattern = new RegExp(`\\b${cookieName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+                            if (cookiePattern.test(rowText)) {
                                 const cells = row.querySelectorAll('td');
-                                let qty = 1;
-                                cells.forEach(cell => {
-                                    const cellText = cell.textContent.trim();
-                                    if (/^\d{1,2}$/.test(cellText)) {
-                                        qty = parseInt(cellText, 10);
+                                let qty = null;
+                                
+                                // Look for the quantity in cells (usually last numeric cell with 1-3 digits)
+                                for (let i = cells.length - 1; i >= 0; i--) {
+                                    const cellText = cells[i].textContent.trim();
+                                    // Match only standalone numbers (not dates/IDs), max 3 digits for reasonable quantities
+                                    if (/^\d+$/.test(cellText) && cellText.length <= 3) {
+                                        const parsedQty = parseInt(cellText, 10);
+                                        if (parsedQty > 0 && parsedQty <= 999) {
+                                            qty = parsedQty;
+                                            break;
+                                        }
                                     }
-                                });
-                                let normalizedName = cookieName;
-                                if (cookieName === 'Caramel deLites') normalizedName = 'Samoas';
-                                if (cookieName === 'Peanut Butter Patties') normalizedName = 'Tagalongs';
-                                if (cookieName === 'Peanut Butter Sandwich') normalizedName = 'Do-si-dos';
-                                if (cookieName === 'Shortbread') normalizedName = 'Trefoils';
-                                result.cookies.push({ name: normalizedName, quantity: qty });
+                                }
+                                
+                                // Only add if we found a valid quantity
+                                if (qty && qty > 0) {
+                                    let normalizedName = cookieName;
+                                    if (cookieName === 'Caramel deLites') normalizedName = 'Samoas';
+                                    if (cookieName === 'Peanut Butter Patties') normalizedName = 'Tagalongs';
+                                    if (cookieName === 'Peanut Butter Sandwich') normalizedName = 'Do-si-dos';
+                                    if (cookieName === 'Shortbread') normalizedName = 'Trefoils';
+                                    
+                                    // Check if this cookie already exists (deduplication)
+                                    const existingCookie = result.cookies.find(c => c.name === normalizedName);
+                                    if (!existingCookie) {
+                                        result.cookies.push({ name: normalizedName, quantity: qty });
+                                    }
+                                }
                             }
                         });
                     });
@@ -792,19 +819,27 @@ class DigitalCookieScraper {
                 if (result.cookies.length === 0) {
                     cookieNames.forEach(cookieName => {
                         const patterns = [
-                            new RegExp(`(\\d+)\\s*(?:x|×)?\\s*${cookieName}`, 'i'),
-                            new RegExp(`${cookieName}[:\\s]*(\\d+)`, 'i'),
-                            new RegExp(`${cookieName}\\s*\\((\\d+)\\)`, 'i')
+                            new RegExp(`(\\d+)\\s*(?:x|×|pkg|pkgs)?\\s*${cookieName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i'),
+                            new RegExp(`${cookieName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[:\\s]*(\\d+)`, 'i'),
+                            new RegExp(`${cookieName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\((\\d+)\\)`, 'i')
                         ];
                         for (const pattern of patterns) {
                             const match = pageText.match(pattern);
                             if (match) {
-                                let normalizedName = cookieName;
-                                if (cookieName === 'Caramel deLites') normalizedName = 'Samoas';
-                                if (cookieName === 'Peanut Butter Patties') normalizedName = 'Tagalongs';
-                                if (cookieName === 'Peanut Butter Sandwich') normalizedName = 'Do-si-dos';
-                                if (cookieName === 'Shortbread') normalizedName = 'Trefoils';
-                                result.cookies.push({ name: normalizedName, quantity: parseInt(match[1], 10) });
+                                const qty = parseInt(match[1], 10);
+                                if (qty > 0 && qty <= 999) {
+                                    let normalizedName = cookieName;
+                                    if (cookieName === 'Caramel deLites') normalizedName = 'Samoas';
+                                    if (cookieName === 'Peanut Butter Patties') normalizedName = 'Tagalongs';
+                                    if (cookieName === 'Peanut Butter Sandwich') normalizedName = 'Do-si-dos';
+                                    if (cookieName === 'Shortbread') normalizedName = 'Trefoils';
+                                    
+                                    // Check if this cookie already exists (deduplication)
+                                    const existingCookie = result.cookies.find(c => c.name === normalizedName);
+                                    if (!existingCookie) {
+                                        result.cookies.push({ name: normalizedName, quantity: qty });
+                                    }
+                                }
                                 break;
                             }
                         }
