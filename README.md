@@ -19,11 +19,11 @@ A mobile-responsive web application for tracking Girl Scout Cookie sales. Design
 
 ## Screenshots
 
-### Desktop View
-![Desktop view with sales data](screenshots/desktop-with-data.png)
-
 ### Mobile View
-![Mobile responsive view](screenshots/mobile-view.png)
+![Mobile Profile Tab](screenshots/mobile-profile.png)
+
+### Mobile Summary View
+![Mobile Summary Tab](screenshots/mobile-summary.png)
 
 ## Cookie Types Included (2026 Season)
 
