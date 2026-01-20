@@ -2,29 +2,6 @@ const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
 
-async function addSampleData(page) {
-  // Add Thin Mints sale
-  await page.selectOption('select#cookieType', 'Thin Mints');
-  await page.fill('input#quantity', '5');
-  await page.fill('input#customerName', 'Mrs. Johnson');
-  await page.click('button[type="submit"]');
-  await page.waitForLoadState('networkidle');
-
-  // Add Samoas sale
-  await page.selectOption('select#cookieType', 'Samoas/Caramel deLites');
-  await page.fill('input#quantity', '3');
-  await page.fill('input#customerName', 'Mr. Smith');
-  await page.click('button[type="submit"]');
-  await page.waitForLoadState('networkidle');
-
-  // Add Exploremores sale
-  await page.selectOption('select#cookieType', 'Exploremores');
-  await page.fill('input#quantity', '2');
-  await page.fill('input#customerName', 'Ms. Davis');
-  await page.click('button[type="submit"]');
-  await page.waitForLoadState('networkidle');
-}
-
 async function captureScreenshots() {
   const browser = await chromium.launch();
   const screenshotsDir = path.join(__dirname, '../../screenshots');
@@ -36,46 +13,54 @@ async function captureScreenshots() {
   }
 
   try {
-    // Desktop view with empty state
-    currentStep = 'capturing desktop empty state';
-    const desktopPage = await browser.newPage({
-      viewport: { width: 1280, height: 720 }
-    });
-    await desktopPage.goto('http://localhost:3000');
-    await desktopPage.waitForLoadState('networkidle');
-    await desktopPage.screenshot({
-      path: path.join(screenshotsDir, 'desktop-empty-state.png'),
-      fullPage: true
-    });
-
-    // Add sample data
-    currentStep = 'adding sample data to desktop view';
-    await addSampleData(desktopPage);
-
-    // Desktop view with data
-    currentStep = 'capturing desktop with data';
-    await desktopPage.screenshot({
-      path: path.join(screenshotsDir, 'desktop-with-data.png'),
-      fullPage: true
-    });
-    await desktopPage.close();
-
-    // Mobile view
-    currentStep = 'capturing mobile view';
+    // Mobile view - Profile tab (default/empty state)
+    currentStep = 'capturing mobile profile tab';
     const mobilePage = await browser.newPage({
       viewport: { width: 375, height: 667 }
     });
     await mobilePage.goto('http://localhost:3000');
     await mobilePage.waitForLoadState('networkidle');
-
-    // Add sample data for mobile view
-    currentStep = 'adding sample data to mobile view';
-    await addSampleData(mobilePage);
-
     await mobilePage.screenshot({
-      path: path.join(screenshotsDir, 'mobile-view.png'),
+      path: path.join(screenshotsDir, 'mobile-profile.png'),
       fullPage: true
     });
+
+    // Mobile view - Summary tab
+    currentStep = 'capturing mobile summary tab';
+    await mobilePage.click('button[data-view="dashboard"]');
+    await mobilePage.waitForTimeout(500);
+    await mobilePage.screenshot({
+      path: path.join(screenshotsDir, 'mobile-summary.png'),
+      fullPage: true
+    });
+
+    // Mobile view - Individual sales tab
+    currentStep = 'capturing mobile individual sales tab';
+    await mobilePage.click('button[data-view="sales"]');
+    await mobilePage.waitForTimeout(500);
+    await mobilePage.screenshot({
+      path: path.join(screenshotsDir, 'mobile-individual-sales.png'),
+      fullPage: true
+    });
+
+    // Mobile view - Events tab
+    currentStep = 'capturing mobile events tab';
+    await mobilePage.click('button[data-view="events"]');
+    await mobilePage.waitForTimeout(500);
+    await mobilePage.screenshot({
+      path: path.join(screenshotsDir, 'mobile-events.png'),
+      fullPage: true
+    });
+
+    // Mobile view - Settings tab
+    currentStep = 'capturing mobile settings tab';
+    await mobilePage.click('button[data-view="settings"]');
+    await mobilePage.waitForTimeout(500);
+    await mobilePage.screenshot({
+      path: path.join(screenshotsDir, 'mobile-settings.png'),
+      fullPage: true
+    });
+
     await mobilePage.close();
 
     console.log('Screenshots captured successfully!');
