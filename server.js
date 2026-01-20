@@ -89,6 +89,13 @@ try {
             donationsReceived REAL DEFAULT 0
         );
 
+        CREATE TABLE IF NOT EXISTS payment_methods (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            url TEXT NOT NULL,
+            isEnabled INTEGER DEFAULT 1
+        );
+
         INSERT OR IGNORE INTO profile (id, goalBoxes, goalAmount) VALUES (1, 0, 0);
     `);
     
@@ -805,6 +812,56 @@ app.post('/api/import', upload.single('file'), (req, res) => {
     } catch (error) {
         logger.error('Error importing XLSX', { error: error.message, stack: error.stack });
         res.status(500).json({ error: 'Failed to import file: ' + error.message });
+    }
+});
+
+// Get payment methods
+app.get('/api/payment-methods', (req, res) => {
+    try {
+        const methods = db.prepare('SELECT * FROM payment_methods ORDER BY id ASC').all();
+        res.json(methods);
+    } catch (error) {
+        logger.error('Error fetching payment methods', { error: error.message, stack: error.stack });
+        res.status(500).json({ error: 'Failed to fetch payment methods' });
+    }
+});
+
+// Add payment method
+app.post('/api/payment-methods', (req, res) => {
+    try {
+        const { name, url } = req.body;
+        
+        if (!name || !url) {
+            return res.status(400).json({ error: 'Name and URL are required' });
+        }
+        
+        const stmt = db.prepare('INSERT INTO payment_methods (name, url) VALUES (?, ?)');
+        const result = stmt.run(name.trim(), url.trim());
+        
+        const newMethod = db.prepare('SELECT * FROM payment_methods WHERE id = ?').get(result.lastInsertRowid);
+        logger.info('Payment method added', { id: newMethod.id, name });
+        res.status(201).json(newMethod);
+    } catch (error) {
+        logger.error('Error adding payment method', { error: error.message, stack: error.stack });
+        res.status(500).json({ error: 'Failed to add payment method' });
+    }
+});
+
+// Delete payment method
+app.delete('/api/payment-methods/:id', (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = db.prepare('DELETE FROM payment_methods WHERE id = ?').run(id);
+        
+        if (result.changes === 0) {
+            return res.status(404).json({ error: 'Payment method not found' });
+        }
+        
+        logger.info('Payment method deleted', { id });
+        res.json({ success: true });
+    } catch (error) {
+        logger.error('Error deleting payment method', { error: error.message, stack: error.stack });
+        res.status(500).json({ error: 'Failed to delete payment method' });
     }
 });
 

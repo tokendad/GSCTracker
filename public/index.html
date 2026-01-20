@@ -46,7 +46,6 @@
                             <img id="profilePhotoDisplay" src="" alt="Profile Photo" class="profile-photo-large" style="display:none;">
                             <div id="profilePhotoPlaceholderDisplay" class="profile-photo-placeholder-large">👤</div>
                         </div>
-                        <p class="profile-hint">Update photo in Settings</p>
                     </div>
 
                     <div class="qr-codes-display">
@@ -59,10 +58,10 @@
                         </div>
 
                         <div class="qr-card">
-                            <h3>Payment</h3>
-                            <div id="paymentQrDisplay" class="qr-display-container">
-                                <img id="paymentQrImageDisplay" src="" alt="Payment QR Code" style="display:none;">
-                                <p id="paymentQrPlaceholder" class="qr-placeholder">No payment QR code set.<br>Add one in Settings.</p>
+                            <h3>Payment Methods</h3>
+                            <div id="paymentMethodsDisplay" class="qr-methods-container">
+                                <p id="paymentMethodsPlaceholder" class="qr-placeholder">No payment methods set.<br>Add them in Settings.</p>
+                                <!-- Payment methods will be injected here -->
                             </div>
                         </div>
                     </div>
@@ -417,42 +416,39 @@
                 <section class="settings-section">
                     <h2>Settings</h2>
 
-                    <!-- Profile Photo -->
+                    <!-- Profile & Store Settings -->
                     <div class="settings-group">
-                        <h3>Profile Photo</h3>
-                        <div class="profile-photo-container" style="text-align: center;">
-                            <img id="profilePhoto" src="" alt="Profile Photo" class="profile-photo" style="display:none;">
-                            <div id="profilePhotoPlaceholder" class="profile-photo-placeholder">📸</div>
-                            <input type="file" id="photoInput" accept="image/*" style="display:none;">
-                            <button id="uploadPhotoBtn" class="btn btn-secondary" style="margin-top: 1rem;">Upload Photo</button>
-                        </div>
-                    </div>
-
-                    <!-- Store QR Code -->
-                    <div class="settings-group">
-                        <h3>Store QR Code</h3>
-                        <p class="import-description">Your Digital Cookie store link for customers to order online</p>
                         <div class="form-group">
-                            <label for="qrCodeUrl">Store URL</label>
+                            <label for="qrCodeUrl">Store URL: Your Digital Cookie store link for customers to order online</label>
                             <input type="url" id="qrCodeUrl" placeholder="https://digitalcookie.girlscouts.org/...">
                         </div>
-                        <button id="updateQrBtn" class="btn btn-secondary">Update Store QR</button>
-                        <div class="qr-code-display" id="qrCodeDisplay" style="display:none; margin-top: 1rem;">
-                            <img id="qrCodeImage" src="" alt="Store QR Code">
+                        <div class="form-row">
+                            <button id="updateQrBtn" class="btn btn-secondary">Update Store QR</button>
+                            <input type="file" id="photoInput" accept="image/*" style="display:none;">
+                            <button id="uploadPhotoBtn" class="btn btn-secondary">Upload Photo</button>
                         </div>
                     </div>
 
-                    <!-- Payment QR Code -->
+                    <!-- Payment Methods -->
                     <div class="settings-group">
-                        <h3>Payment QR Code</h3>
-                        <p class="import-description">QR code for payment (Venmo, PayPal, etc.) that customers can scan</p>
-                        <div class="form-group">
-                            <label for="paymentQrCodeUrl">Payment URL</label>
-                            <input type="url" id="paymentQrCodeUrl" placeholder="https://venmo.com/u/...">
+                        <h3>Payment Methods</h3>
+                        <p class="import-description">Add payment options (Venmo, PayPal, etc.) for customers to scan</p>
+                        
+                        <div id="settingsPaymentMethodsList" class="settings-payment-list">
+                            <!-- List items injected here -->
                         </div>
-                        <button id="updatePaymentQrBtn" class="btn btn-secondary">Update Payment QR</button>
-                        <div class="qr-code-display" id="paymentQrCodeDisplay" style="display:none; margin-top: 1rem;">
-                            <img id="paymentQrCodeImage" src="" alt="Payment QR Code">
+
+                        <div class="add-payment-form">
+                            <h4>Add New Payment Method</h4>
+                            <div class="form-group">
+                                <label for="newPaymentName">Provider Name</label>
+                                <input type="text" id="newPaymentName" placeholder="e.g., Venmo, PayPal, CashApp">
+                            </div>
+                            <div class="form-group">
+                                <label for="newPaymentUrl">Payment Link / URL</label>
+                                <input type="url" id="newPaymentUrl" placeholder="https://venmo.com/u/username">
+                            </div>
+                            <button id="addPaymentMethodBtn" class="btn btn-secondary">Add Payment Method</button>
                         </div>
                     </div>
 

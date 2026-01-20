@@ -109,3 +109,6 @@ The backend exposes a RESTful API at `/api/`.
 -   **Environment Variables:**
     -   `PORT`: Server port (default: 3000).
     -   `DATA_DIR`: Directory for database and logs (default: `/data`).
+-   **AI Coding Standards:**
+    -   **Full Code Reviews:** When reviewing code, provide comprehensive analysis covering logic, style, security, and potential bugs. Do not summarize unless explicitly asked.
+    -   **No Truncation:** When generating or modifying code, ALWAYS provide the FULL file content or the COMPLETE function/block being modified. Never use placeholders like `// ... rest of code` or `<!-- ... existing code ... -->`. The goal is to have copy-paste ready code that requires no manual stitching.

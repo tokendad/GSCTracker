@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Multiple Payment Methods:** Users can now add multiple payment options (e.g., Venmo, PayPal, CashApp) in Settings.
+- **Dynamic Profile QR Codes:** Profile screen now displays a QR code for each added payment method with its provider name.
+- "Edit Event" functionality to the Events tab, allowing users to modify existing event details.
 - Danger Zone section in Settings with data management buttons (Delete All Sales, Delete All Donations, Clear Import History)
 - API endpoints for data deletion: `DELETE /api/sales`, `DELETE /api/donations`, `DELETE /api/import-history`
 - Detailed order logging during Digital Cookie sync showing customer names, box counts, dates, and order numbers
@@ -43,6 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive error logging with Winston, daily rotation, and colored output ([#16](https://github.com/tokendad/GSCTracker/pull/16))
 
 ### Changed
+- Removed profile photo preview, store QR preview, and payment QR preview from the Settings screen to clean up the UI.
+- Removed "Update photo in Settings" text from the Profile screen.
 - Improved Digital Cookie scraper login reliability with expanded selectors and JavaScript fallback
 - Digital Cookie scraper now correctly handles cookie consent banners
 - Scraper uses exact Digital Cookie selectors: `#username`, `#password`, `#loginButton`, `#acceptAllCookieButton`
@@ -61,18 +66,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Deprecated
 
 ### Removed
+- Removed example Excel files from `docs/` folder to clean up repository.
 
 ### Fixed
-- Fixed Digital Cookie scraper duplicate order detection - removed VIEW link parsing that caused duplicate entries
-- Fixed scraper to skip action words (View, Edit, Delete) when parsing customer names
-- Fixed `waitForTimeout` deprecation by replacing with Promise-based timeout
-- Fix top bar navigation to match PR#14 design - moved nav below header with 3 tabs (Profile, Individual, Events) using icons above text
-- Fix YAML syntax errors in changelog workflow ([#17](https://github.com/tokendad/GSCTracker/pull/17))
-  - Resolved issues from 21 consecutive failed workflow runs between PR #7 (which created the workflow) and PR #17
-  - Fixed YAML parsing errors: changed `'on':` to `on:` and corrected heredoc indentation in multiline script
-  - All 21 failures showed 0 jobs executed due to GitHub Actions being unable to parse the workflow file
-  - Root cause: Heredoc content at column 0 while surrounding bash script was indented to column 10, causing YAML parser to fail with "could not find expected ':'"
-  - Solution: Indented heredoc content to maintain YAML validity and added `sed` command to normalize output file
+- Fixed global stats calculation to include donation "boxes" (Cookie Share) in the Total Boxes Sold tally.
+- Fixed Total Revenue calculation to correctly include monetary donations.
 
 ### Security
 

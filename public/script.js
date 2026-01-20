@@ -21,7 +21,11 @@ function convertToBoxes(sale) {
 let sales = [];
 let donations = [];
 let events = [];
+let paymentMethods = [];
 let profile = null;
+
+// Track which event is being edited (null = adding new)
+let editingEventId = null;
 
 // DOM Elements
 const saleForm = document.getElementById('saleForm');
@@ -48,26 +52,22 @@ const orderTotalAmountEl = document.getElementById('orderTotalAmount');
 // Profile elements
 const photoInput = document.getElementById('photoInput');
 const uploadPhotoBtn = document.getElementById('uploadPhotoBtn');
-const profilePhoto = document.getElementById('profilePhoto');
-const profilePhotoPlaceholder = document.getElementById('profilePhotoPlaceholder');
 const qrCodeUrlInput = document.getElementById('qrCodeUrl');
 const updateQrBtn = document.getElementById('updateQrBtn');
-const qrCodeDisplay = document.getElementById('qrCodeDisplay');
-const qrCodeImage = document.getElementById('qrCodeImage');
 
-// Payment QR elements
-const paymentQrCodeUrlInput = document.getElementById('paymentQrCodeUrl');
-const updatePaymentQrBtn = document.getElementById('updatePaymentQrBtn');
-const paymentQrCodeDisplay = document.getElementById('paymentQrCodeDisplay');
-const paymentQrCodeImage = document.getElementById('paymentQrCodeImage');
+// Payment Method elements
+const settingsPaymentMethodsList = document.getElementById('settingsPaymentMethodsList');
+const newPaymentNameInput = document.getElementById('newPaymentName');
+const newPaymentUrlInput = document.getElementById('newPaymentUrl');
+const addPaymentMethodBtn = document.getElementById('addPaymentMethodBtn');
 
 // Profile display elements (for Profile tab)
 const profilePhotoDisplay = document.getElementById('profilePhotoDisplay');
 const profilePhotoPlaceholderDisplay = document.getElementById('profilePhotoPlaceholderDisplay');
 const storeQrImageDisplay = document.getElementById('storeQrImageDisplay');
 const storeQrPlaceholder = document.getElementById('storeQrPlaceholder');
-const paymentQrImageDisplay = document.getElementById('paymentQrImageDisplay');
-const paymentQrPlaceholder = document.getElementById('paymentQrPlaceholder');
+const paymentMethodsDisplay = document.getElementById('paymentMethodsDisplay');
+const paymentMethodsPlaceholder = document.getElementById('paymentMethodsPlaceholder');
 
 // Goal elements
 const goalBoxesInput = document.getElementById('goalBoxes');
@@ -97,10 +97,11 @@ const eventsList = document.getElementById('eventsList');
 
 // Initialize app
 async function init() {
-    await Promise.all([loadSales(), loadDonations(), loadEvents(), loadProfile()]);
+    await Promise.all([loadSales(), loadDonations(), loadEvents(), loadProfile(), loadPaymentMethods()]);
     renderSales();
     renderDonations();
     renderEvents();
+    renderPaymentMethodsSettings();
     updateSummary();
     updateBreakdown();
     updateGoalDisplay();
@@ -118,8 +119,10 @@ function setupEventListeners() {
     uploadPhotoBtn.addEventListener('click', () => photoInput.click());
     photoInput.addEventListener('change', handlePhotoUpload);
     updateQrBtn.addEventListener('click', handleUpdateQrCode);
-    if (updatePaymentQrBtn) {
-        updatePaymentQrBtn.addEventListener('click', handleUpdatePaymentQrCode);
+    
+    // Payment Method listeners
+    if (addPaymentMethodBtn) {
+        addPaymentMethodBtn.addEventListener('click', handleAddPaymentMethod);
     }
 
     // Goal listeners
@@ -185,21 +188,8 @@ async function loadProfile() {
         profile = await response.json();
 
         // Update Settings page UI with profile data
-        if (profile.photoData) {
-            profilePhoto.src = profile.photoData;
-            profilePhoto.style.display = 'block';
-            profilePhotoPlaceholder.style.display = 'none';
-        }
-
         if (profile.qrCodeUrl) {
             qrCodeUrlInput.value = profile.qrCodeUrl;
-            generateQrCode(profile.qrCodeUrl);
-        }
-
-        // Load payment QR code URL
-        if (profile.paymentQrCodeUrl && paymentQrCodeUrlInput) {
-            paymentQrCodeUrlInput.value = profile.paymentQrCodeUrl;
-            generatePaymentQrCode(profile.paymentQrCodeUrl);
         }
 
         if (profile.goalBoxes) {
@@ -245,20 +235,35 @@ function updateProfileDisplay() {
         }
     }
 
-    // Update payment QR display
-    if (profile && profile.paymentQrCodeUrl && paymentQrImageDisplay) {
-        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(profile.paymentQrCodeUrl)}`;
-        paymentQrImageDisplay.src = qrApiUrl;
-        paymentQrImageDisplay.style.display = 'block';
-        if (paymentQrPlaceholder) {
-            paymentQrPlaceholder.style.display = 'none';
+    // Update payment methods display
+    renderPaymentMethodsProfile();
+}
+
+// Render payment methods in Profile tab
+function renderPaymentMethodsProfile() {
+    if (!paymentMethodsDisplay) return;
+
+    if (paymentMethods.length === 0) {
+        paymentMethodsDisplay.innerHTML = '';
+        if (paymentMethodsPlaceholder) {
+            paymentMethodsPlaceholder.style.display = 'block';
         }
-    } else if (paymentQrImageDisplay) {
-        paymentQrImageDisplay.style.display = 'none';
-        if (paymentQrPlaceholder) {
-            paymentQrPlaceholder.style.display = 'block';
-        }
+        return;
     }
+
+    if (paymentMethodsPlaceholder) {
+        paymentMethodsPlaceholder.style.display = 'none';
+    }
+
+    paymentMethodsDisplay.innerHTML = paymentMethods.map(method => {
+        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(method.url)}`;
+        return `
+            <div class="qr-display-container">
+                <h4 class="qr-method-title">${method.name}</h4>
+                <img src="${qrApiUrl}" alt="${method.name} QR Code">
+            </div>
+        `;
+    }).join('');
 }
 
 // Handle photo upload
@@ -337,96 +342,104 @@ async function handleUpdateQrCode() {
     }
 }
 
-// Generate QR code using external service
-function generateQrCode(url) {
-    // Validate URL before generating QR code
+// Load payment methods
+async function loadPaymentMethods() {
     try {
-        new URL(url);
-        // Use a QR code API service with proper encoding
-        const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
-
-        // Add error handling for image loading
-        qrCodeImage.onerror = () => {
-            qrCodeDisplay.style.display = 'none';
-            console.error('Failed to generate QR code');
-        };
-
-        qrCodeImage.onload = () => {
-            qrCodeDisplay.style.display = 'block';
-        };
-
-        qrCodeImage.src = qrCodeApiUrl;
-    } catch (error) {
-        console.error('Invalid URL for QR code:', error);
-        qrCodeDisplay.style.display = 'none';
-    }
-}
-
-// Handle Payment QR code update
-async function handleUpdatePaymentQrCode() {
-    const paymentQrCodeUrl = paymentQrCodeUrlInput.value.trim();
-
-    if (!paymentQrCodeUrl) {
-        alert('Please enter a payment QR code URL');
-        return;
-    }
-
-    // Validate URL format
-    try {
-        const urlObj = new URL(paymentQrCodeUrl);
-        if (urlObj.protocol !== 'https:' && urlObj.protocol !== 'http:') {
-            alert('Please enter a valid HTTP or HTTPS URL');
-            return;
-        }
-    } catch (error) {
-        alert('Please enter a valid URL');
-        return;
-    }
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/profile`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentQrCodeUrl })
-        });
-
+        const response = await fetch(`${API_BASE_URL}/payment-methods`);
         if (!response.ok) {
-            throw new Error('Failed to update payment QR code');
+            throw new Error('Failed to fetch payment methods');
         }
-
-        await loadProfile();
-        showFeedback('Payment QR code updated!');
+        paymentMethods = await response.json();
+        // Update profile display whenever methods change
+        updateProfileDisplay();
     } catch (error) {
-        console.error('Error updating payment QR code:', error);
-        alert('Error updating payment QR code. Please try again.');
+        console.error('Error loading payment methods:', error);
+        paymentMethods = [];
     }
 }
 
-// Generate Payment QR code using external service
-function generatePaymentQrCode(url) {
-    if (!paymentQrCodeImage || !paymentQrCodeDisplay) return;
-
-    // Validate URL before generating QR code
-    try {
-        new URL(url);
-        // Use a QR code API service with proper encoding
-        const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
-
-        // Add error handling for image loading
-        paymentQrCodeImage.onerror = () => {
-            paymentQrCodeDisplay.style.display = 'none';
-            console.error('Failed to generate payment QR code');
-        };
-
-        paymentQrCodeImage.onload = () => {
-            paymentQrCodeDisplay.style.display = 'block';
-        };
-
-        paymentQrCodeImage.src = qrCodeApiUrl;
-    } catch (error) {
-        console.error('Invalid URL for payment QR code:', error);
-        paymentQrCodeDisplay.style.display = 'none';
+// Handle add payment method
+async function handleAddPaymentMethod() {
+    const name = newPaymentNameInput.value.trim();
+    const url = newPaymentUrlInput.value.trim();
+    
+    if (!name || !url) {
+        alert('Please enter both a name and a URL');
+        return;
     }
+    
+    try {
+        // Validate URL
+        new URL(url);
+    } catch {
+        alert('Please enter a valid URL (starting with http:// or https://)');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/payment-methods`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, url })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to add payment method');
+        }
+        
+        // Clear inputs
+        newPaymentNameInput.value = '';
+        newPaymentUrlInput.value = '';
+        
+        await loadPaymentMethods();
+        renderPaymentMethodsSettings();
+        showFeedback('Payment method added!');
+    } catch (error) {
+        console.error('Error adding payment method:', error);
+        alert('Error adding payment method');
+    }
+}
+
+// Handle delete payment method
+async function handleDeletePaymentMethod(id) {
+    if (!confirm('Delete this payment method?')) return;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/payment-methods/${id}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to delete payment method');
+        }
+        
+        await loadPaymentMethods();
+        renderPaymentMethodsSettings();
+        showFeedback('Payment method deleted');
+    } catch (error) {
+        console.error('Error deleting payment method:', error);
+        alert('Error deleting payment method');
+    }
+}
+
+// Render payment methods in Settings
+function renderPaymentMethodsSettings() {
+    if (!settingsPaymentMethodsList) return;
+    
+    if (paymentMethods.length === 0) {
+        settingsPaymentMethodsList.innerHTML = '<p class="empty-message">No payment methods added yet.</p>';
+        return;
+    }
+    
+    settingsPaymentMethodsList.innerHTML = paymentMethods.map(method => `
+        <div class="payment-method-item">
+            <div class="payment-method-info">
+                <strong>${method.name}</strong>
+                <div class="payment-method-url">${method.url}</div>
+            </div>
+            <button class="btn-delete-small" onclick="handleDeletePaymentMethod(${method.id})">Remove</button>
+        </div>
+    `).join('');
 }
 
 // Handle set goal
@@ -460,8 +473,11 @@ function updateGoalDisplay() {
     
     const goalBoxes = profile.goalBoxes || 0;
     const goalAmount = profile.goalAmount || 0;
-    // Calculate total boxes (converting cases to boxes where needed)
-    const totalBoxes = sales.reduce((sum, sale) => sum + convertToBoxes(sale), 0);
+    
+    // Calculate total boxes (sales + donations)
+    const salesBoxes = sales.reduce((sum, sale) => sum + convertToBoxes(sale), 0);
+    const donationBoxes = donations.reduce((sum, donation) => sum + (donation.boxCount || 0), 0);
+    const totalBoxes = salesBoxes + donationBoxes;
     
     goalBoxesDisplay.textContent = `${goalBoxes} boxes ($${goalAmount})`;
     
@@ -734,7 +750,7 @@ async function handleDeleteDonation(id) {
     }
 }
 
-// Handle add event
+// Handle add/edit event
 async function handleAddEvent(e) {
     e.preventDefault();
     
@@ -764,28 +780,94 @@ async function handleAddEvent(e) {
     };
     
     try {
-        const response = await fetch(`${API_BASE_URL}/events`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(event)
-        });
+        let response;
+        if (editingEventId) {
+            // Update existing event
+            response = await fetch(`${API_BASE_URL}/events/${editingEventId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(event)
+            });
+        } else {
+            // Create new event
+            response = await fetch(`${API_BASE_URL}/events`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(event)
+            });
+        }
         
         if (!response.ok) {
-            throw new Error('Failed to add event');
+            throw new Error(editingEventId ? 'Failed to update event' : 'Failed to add event');
         }
         
         await loadEvents();
         renderEvents();
         updateSummary();
         
-        // Reset form
-        eventForm.reset();
+        // Reset form and editing state
+        resetEventForm();
         
-        showFeedback('Event saved successfully!');
+        showFeedback(editingEventId ? 'Event updated successfully!' : 'Event saved successfully!');
     } catch (error) {
-        console.error('Error adding event:', error);
-        alert('Error adding event. Please try again.');
+        console.error('Error saving event:', error);
+        alert('Error saving event. Please try again.');
     }
+}
+
+function resetEventForm() {
+    eventForm.reset();
+    editingEventId = null;
+    const submitBtn = eventForm.querySelector('button[type="submit"]');
+    submitBtn.textContent = 'Save Event';
+    
+    // Remove cancel button if it exists
+    const cancelBtn = document.getElementById('cancelEditEventBtn');
+    if (cancelBtn) {
+        cancelBtn.remove();
+    }
+}
+
+function handleEditEvent(id) {
+    const event = events.find(e => e.id == id);
+    if (!event) return;
+    
+    editingEventId = id;
+    
+    // Populate form
+    eventNameInput.value = event.eventName;
+    // Format date for datetime-local input (YYYY-MM-DDThh:mm)
+    const date = new Date(event.eventDate);
+    // Adjust for local timezone offset to ensure correct display
+    const tzOffset = date.getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(date - tzOffset)).toISOString().slice(0, 16);
+    eventDateInput.value = localISOTime;
+    
+    eventDescriptionInput.value = event.description || '';
+    initialBoxesInput.value = event.initialBoxes;
+    initialCasesInput.value = event.initialCases;
+    remainingBoxesInput.value = event.remainingBoxes;
+    remainingCasesInput.value = event.remainingCases;
+    eventDonationsInput.value = event.donationsReceived;
+    
+    // Change submit button text
+    const submitBtn = eventForm.querySelector('button[type="submit"]');
+    submitBtn.textContent = 'Update Event';
+    
+    // Add cancel button if not exists
+    if (!document.getElementById('cancelEditEventBtn')) {
+        const cancelBtn = document.createElement('button');
+        cancelBtn.id = 'cancelEditEventBtn';
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'btn btn-secondary';
+        cancelBtn.style.marginLeft = '10px';
+        cancelBtn.textContent = 'Cancel Edit';
+        cancelBtn.addEventListener('click', resetEventForm);
+        submitBtn.parentNode.insertBefore(cancelBtn, submitBtn.nextSibling);
+    }
+    
+    // Scroll to form
+    eventForm.scrollIntoView({ behavior: 'smooth' });
 }
 
 // Handle delete event
@@ -862,11 +944,20 @@ function renderEvents() {
                     ` : ''}
                 </div>
                 <div class="event-actions">
+                    <button class="btn-secondary btn-edit" data-event-id="${event.id}" style="margin-right: 8px;">Edit</button>
                     <button class="btn-delete" data-event-id="${event.id}">Delete</button>
                 </div>
             </div>
         `;
     }).join('');
+    
+    // Add event listeners for edit buttons
+    document.querySelectorAll('.events-list .btn-edit').forEach(button => {
+        button.addEventListener('click', () => {
+            const eventId = button.getAttribute('data-event-id');
+            handleEditEvent(eventId);
+        });
+    });
     
     // Add event listeners for delete buttons
     document.querySelectorAll('.events-list .btn-delete').forEach(button => {
@@ -1232,20 +1323,28 @@ function renderDonations() {
 
 // Update summary statistics
 function updateSummary() {
-    // Calculate total boxes (converting cases to boxes where needed)
-    const totalBoxes = sales.reduce((sum, sale) => sum + convertToBoxes(sale), 0);
+    // Calculate sales boxes (converting cases to boxes where needed)
+    const salesBoxes = sales.reduce((sum, sale) => sum + convertToBoxes(sale), 0);
+    
+    // Calculate donation boxes (Cookie Share)
+    const donationBoxes = donations.reduce((sum, donation) => sum + (donation.boxCount || 0), 0);
+    
+    const totalBoxes = salesBoxes + donationBoxes;
     
     const individualBoxes = sales.filter(s => s.saleType === 'individual').reduce((sum, sale) => sum + convertToBoxes(sale), 0);
-    
     const eventBoxes = sales.filter(s => s.saleType === 'event').reduce((sum, sale) => sum + convertToBoxes(sale), 0);
     
-    const totalRevenue = totalBoxes * PRICE_PER_BOX;
+    const salesRevenue = salesBoxes * PRICE_PER_BOX;
     const totalDonationAmount = donations.reduce((sum, donation) => sum + donation.amount, 0);
     
+    const totalRevenue = salesRevenue + totalDonationAmount;
+    
     totalBoxesElement.textContent = totalBoxes;
+    // Update labels to be more clear if needed, or just keep as is
     individualSalesElement.textContent = `${individualBoxes} boxes`;
     eventSalesElement.textContent = `${eventBoxes} boxes`;
-    totalRevenueElement.textContent = `$${totalRevenue}`;
+    
+    totalRevenueElement.textContent = `$${totalRevenue.toFixed(2)}`;
     totalDonationsElement.textContent = `$${totalDonationAmount.toFixed(2)}`;
 }
 
