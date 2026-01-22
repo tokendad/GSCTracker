@@ -38,6 +38,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: ./Dockerfile.demo
           push: true
           tags: ${{ env.IMAGE_NAME }}:demo
           cache-from: type=gha

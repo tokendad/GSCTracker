@@ -215,6 +215,10 @@ data/
 *.db
 *.db-journal
 
+# Exception: Allow demo data (demo branch only)
+!demo-data/
+!demo-data/*.db
+
 # Project-specific
 docs/instructions.md
 scraper/
