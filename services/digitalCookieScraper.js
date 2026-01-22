@@ -556,8 +556,12 @@ class DigitalCookieScraper {
                             } else if (header.includes('address') || header.includes('delivery address')) {
                                 order.customerAddress = cellText;
                             } else if (header.includes('date') && !header.includes('initial')) {
+<<<<<<< HEAD
                                 order.orderDate = parseDate(cellText);
                             } else if (header.includes('status')) {
+=======
+                                order.orderDate = parseDate(cellText);                            } else if (header.includes('status')) {
+>>>>>>> 04d2f74bfb07dcb9ae43299aa0d3de0fe5f1ef79
                                 order.orderStatus = cellText;
                                 if (cellText.toLowerCase() === 'delivered') {
                                     order.isCompleted = true;
@@ -578,6 +582,14 @@ class DigitalCookieScraper {
                                 let orderMatch = href.match(/order[\/=](\d+)/i) || onclick.match(/order[^\d]*(\d+)/i);
                                 if (orderMatch && !order.orderNumber) {
                                     order.orderNumber = orderMatch[1];
+                                }
+                                
+                                // Extract order ID from link text (e.g., "Order #163717824" or just "163717824")
+                                if (!order.orderNumber) {
+                                    const linkTextMatch = linkText.match(/(?:order\s*#?\s*)?(\d{8,12})/i);
+                                    if (linkTextMatch) {
+                                        order.orderNumber = linkTextMatch[1];
+                                    }
                                 }
 
                                 // Pattern 2: Extract 8-12 digit number from URL path (handles /cookieorderdetail/163717824)
@@ -714,7 +726,11 @@ class DigitalCookieScraper {
             } else {
                 logger.warn('No orders with order numbers found for detail scraping');
             }
+<<<<<<< HEAD
 
+=======
+            
+>>>>>>> 04d2f74bfb07dcb9ae43299aa0d3de0fe5f1ef79
             // Log orders without numbers for debugging
             const ordersWithoutNumbers = extractedOrders.filter(o => !o.orderNumber);
             if (ordersWithoutNumbers.length > 0) {
@@ -727,6 +743,7 @@ class DigitalCookieScraper {
                         tableSection: o.tableSection
                     }))
                 });
+<<<<<<< HEAD
             }
 
             /**
@@ -757,6 +774,8 @@ class DigitalCookieScraper {
                 });
             } else {
                 logger.info('VALIDATION: All orders passed box count consistency check');
+=======
+>>>>>>> 04d2f74bfb07dcb9ae43299aa0d3de0fe5f1ef79
             }
 
             // Log final results
@@ -1112,6 +1131,7 @@ class DigitalCookieScraper {
 
                 tables.forEach((table, tableIndex) => {
                     const rows = table.querySelectorAll('tr');
+<<<<<<< HEAD
                     const tableInfo = {
                         index: tableIndex,
                         rowCount: rows.length,
@@ -1136,15 +1156,28 @@ class DigitalCookieScraper {
                         // Skip generic "assorted" or summary rows
                         const lowerRowText = rowText.toLowerCase();
                         if (lowerRowText.includes('assorted') ||
+=======
+                    rows.forEach(row => {
+                        const rowText = row.textContent;
+                        
+                        // Skip generic "assorted" or summary rows
+                        const lowerRowText = rowText.toLowerCase();
+                        if (lowerRowText.includes('assorted') || 
+>>>>>>> 04d2f74bfb07dcb9ae43299aa0d3de0fe5f1ef79
                             lowerRowText.includes('total') ||
                             lowerRowText.includes('subtotal')) {
                             return;
                         }
+<<<<<<< HEAD
 
+=======
+                        
+>>>>>>> 04d2f74bfb07dcb9ae43299aa0d3de0fe5f1ef79
                         cookieNames.forEach(cookieName => {
                             // Use word boundary matching to avoid false positives
                             const cookiePattern = new RegExp(`\\b${cookieName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
                             if (cookiePattern.test(rowText)) {
+<<<<<<< HEAD
                                 let qty = null;
                                 let qtySource = null;
 
@@ -1192,6 +1225,24 @@ class DigitalCookieScraper {
                                     tableIndex
                                 });
 
+=======
+                                const cells = row.querySelectorAll('td');
+                                let qty = null;
+                                
+                                // Look for the quantity in cells (usually last numeric cell with 1-3 digits)
+                                for (let i = cells.length - 1; i >= 0; i--) {
+                                    const cellText = cells[i].textContent.trim();
+                                    // Match only standalone numbers (not dates/IDs), max 3 digits for reasonable quantities
+                                    if (/^\d+$/.test(cellText) && cellText.length <= 3) {
+                                        const parsedQty = parseInt(cellText, 10);
+                                        if (parsedQty > 0 && parsedQty <= 999) {
+                                            qty = parsedQty;
+                                            break;
+                                        }
+                                    }
+                                }
+                                
+>>>>>>> 04d2f74bfb07dcb9ae43299aa0d3de0fe5f1ef79
                                 // Only add if we found a valid quantity
                                 if (qty && qty > 0) {
                                     let normalizedName = cookieName;
@@ -1199,7 +1250,11 @@ class DigitalCookieScraper {
                                     if (cookieName === 'Peanut Butter Patties') normalizedName = 'Tagalongs';
                                     if (cookieName === 'Peanut Butter Sandwich') normalizedName = 'Do-si-dos';
                                     if (cookieName === 'Shortbread') normalizedName = 'Trefoils';
+<<<<<<< HEAD
 
+=======
+                                    
+>>>>>>> 04d2f74bfb07dcb9ae43299aa0d3de0fe5f1ef79
                                     // Check if this cookie already exists (deduplication)
                                     const existingCookie = result.cookies.find(c => c.name === normalizedName);
                                     if (!existingCookie) {
@@ -1267,12 +1322,18 @@ class DigitalCookieScraper {
                     cookieNames.forEach(cookieName => {
                         const escapedName = cookieName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                         const patterns = [
+<<<<<<< HEAD
                             // Digital Cookie format: "CookieName®, 2\npkgs"
                             new RegExp(`${escapedName}[®™]?,\\s*(\\d+)\\s*(?:\\n|pkg)`, 'i'),
                             // Standard formats
                             new RegExp(`(\\d+)\\s*(?:x|×|pkg|pkgs)?\\s*${escapedName}`, 'i'),
                             new RegExp(`${escapedName}[:\\s]*(\\d+)`, 'i'),
                             new RegExp(`${escapedName}\\s*\\((\\d+)\\)`, 'i')
+=======
+                            new RegExp(`(\\d+)\\s*(?:x|×|pkg|pkgs)?\\s*${cookieName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i'),
+                            new RegExp(`${cookieName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[:\\s]*(\\d+)`, 'i'),
+                            new RegExp(`${cookieName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\((\\d+)\\)`, 'i')
+>>>>>>> 04d2f74bfb07dcb9ae43299aa0d3de0fe5f1ef79
                         ];
                         for (const pattern of patterns) {
                             const match = pageText.match(pattern);
@@ -1284,7 +1345,11 @@ class DigitalCookieScraper {
                                     if (cookieName === 'Peanut Butter Patties') normalizedName = 'Tagalongs';
                                     if (cookieName === 'Peanut Butter Sandwich') normalizedName = 'Do-si-dos';
                                     if (cookieName === 'Shortbread') normalizedName = 'Trefoils';
+<<<<<<< HEAD
 
+=======
+                                    
+>>>>>>> 04d2f74bfb07dcb9ae43299aa0d3de0fe5f1ef79
                                     // Check if this cookie already exists (deduplication)
                                     const existingCookie = result.cookies.find(c => c.name === normalizedName);
                                     if (!existingCookie) {
