@@ -1,0 +1,22 @@
+services:
+  gsctrackerdev:
+    image: neuman1812/gsctracker:demo
+    container_name: gsctrackerdev
+    ports:
+      - "8282:3000"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+      - UMASK=${UMASK:-002}
+      - PORT=3000
+      - DATA_DIR=/data
+      - LOG_DIR=/data/logs
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    # DO NOT mount ./data directory - use pre-seeded demo database from image
+    volumes:
+      - demo_data:/data  # Named volume preserves demo data from image
+    restart: unless-stopped
+
+volumes:
+  demo_data:
