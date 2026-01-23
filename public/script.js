@@ -237,6 +237,82 @@ function updateProfileDisplay() {
 
     // Update payment methods display
     renderPaymentMethodsProfile();
+
+    // Update inventory display
+    updateInventoryDisplay();
+}
+
+// Update inventory display from profile data
+function updateInventoryDisplay() {
+    if (!profile) return;
+    
+    const inventoryFields = [
+        'ThinMints', 'Samoas', 'Tagalongs', 'Trefoils', 
+        'DosiDos', 'LemonUps', 'Adventurefuls', 'Exploremores', 'Toffeetastic'
+    ];
+    
+    inventoryFields.forEach(field => {
+        const input = document.getElementById(`inventory${field}`);
+        if (input) {
+            const value = profile[`inventory${field}`] || 0;
+            input.value = value;
+        }
+    });
+}
+
+// Increment inventory
+function incrementInventory(cookieType) {
+    const input = document.getElementById(`inventory${cookieType}`);
+    if (input) {
+        input.value = parseInt(input.value || 0) + 1;
+        saveInventory();
+    }
+}
+
+// Decrement inventory
+function decrementInventory(cookieType) {
+    const input = document.getElementById(`inventory${cookieType}`);
+    if (input) {
+        const currentValue = parseInt(input.value || 0);
+        if (currentValue > 0) {
+            input.value = currentValue - 1;
+            saveInventory();
+        }
+    }
+}
+
+// Save inventory to profile
+async function saveInventory() {
+    try {
+        const inventoryData = {
+            inventoryThinMints: parseInt(document.getElementById('inventoryThinMints').value || 0),
+            inventorySamoas: parseInt(document.getElementById('inventorySamoas').value || 0),
+            inventoryTagalongs: parseInt(document.getElementById('inventoryTagalongs').value || 0),
+            inventoryTrefoils: parseInt(document.getElementById('inventoryTrefoils').value || 0),
+            inventoryDosiDos: parseInt(document.getElementById('inventoryDosiDos').value || 0),
+            inventoryLemonUps: parseInt(document.getElementById('inventoryLemonUps').value || 0),
+            inventoryAdventurefuls: parseInt(document.getElementById('inventoryAdventurefuls').value || 0),
+            inventoryExploremores: parseInt(document.getElementById('inventoryExploremores').value || 0),
+            inventoryToffeetastic: parseInt(document.getElementById('inventoryToffeetastic').value || 0)
+        };
+
+        const response = await fetch(`${API_BASE_URL}/profile`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(inventoryData)
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to save inventory');
+        }
+
+        profile = await response.json();
+    } catch (error) {
+        console.error('Error saving inventory:', error);
+        alert('Failed to save inventory');
+    }
 }
 
 // Render payment methods in Profile tab
