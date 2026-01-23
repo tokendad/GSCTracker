@@ -284,17 +284,17 @@ function decrementInventory(cookieType) {
 // Save inventory to profile
 async function saveInventory() {
     try {
-        const inventoryData = {
-            inventoryThinMints: parseInt(document.getElementById('inventoryThinMints').value || 0),
-            inventorySamoas: parseInt(document.getElementById('inventorySamoas').value || 0),
-            inventoryTagalongs: parseInt(document.getElementById('inventoryTagalongs').value || 0),
-            inventoryTrefoils: parseInt(document.getElementById('inventoryTrefoils').value || 0),
-            inventoryDosiDos: parseInt(document.getElementById('inventoryDosiDos').value || 0),
-            inventoryLemonUps: parseInt(document.getElementById('inventoryLemonUps').value || 0),
-            inventoryAdventurefuls: parseInt(document.getElementById('inventoryAdventurefuls').value || 0),
-            inventoryExploremores: parseInt(document.getElementById('inventoryExploremores').value || 0),
-            inventoryToffeetastic: parseInt(document.getElementById('inventoryToffeetastic').value || 0)
-        };
+        const inventoryFields = [
+            'ThinMints', 'Samoas', 'Tagalongs', 'Trefoils', 
+            'DosiDos', 'LemonUps', 'Adventurefuls', 'Exploremores', 'Toffeetastic'
+        ];
+        
+        const inventoryData = inventoryFields.reduce((data, field) => {
+            const input = document.getElementById(`inventory${field}`);
+            const value = parseInt(input.value, 10);
+            data[`inventory${field}`] = (isNaN(value) || value < 0) ? 0 : value;
+            return data;
+        }, {});
 
         const response = await fetch(`${API_BASE_URL}/profile`, {
             method: 'PUT',

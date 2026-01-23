@@ -401,20 +401,20 @@ app.put('/api/profile', (req, res) => {
             inventoryAdventurefuls, inventoryExploremores, inventoryToffeetastic
         } = req.body;
 
+        // Helper function to validate numeric values
+        const validateNumber = (value) => (typeof value === 'number' && value >= 0) ? value : 0;
+
         // Validate goalBoxes and goalAmount
-        const validGoalBoxes = (typeof goalBoxes === 'number' && goalBoxes >= 0) ? goalBoxes : 0;
-        const validGoalAmount = (typeof goalAmount === 'number' && goalAmount >= 0) ? goalAmount : 0;
+        const validGoalBoxes = validateNumber(goalBoxes);
+        const validGoalAmount = validateNumber(goalAmount);
 
         // Validate inventory values
-        const validInventoryThinMints = (typeof inventoryThinMints === 'number' && inventoryThinMints >= 0) ? inventoryThinMints : 0;
-        const validInventorySamoas = (typeof inventorySamoas === 'number' && inventorySamoas >= 0) ? inventorySamoas : 0;
-        const validInventoryTagalongs = (typeof inventoryTagalongs === 'number' && inventoryTagalongs >= 0) ? inventoryTagalongs : 0;
-        const validInventoryTrefoils = (typeof inventoryTrefoils === 'number' && inventoryTrefoils >= 0) ? inventoryTrefoils : 0;
-        const validInventoryDosiDos = (typeof inventoryDosiDos === 'number' && inventoryDosiDos >= 0) ? inventoryDosiDos : 0;
-        const validInventoryLemonUps = (typeof inventoryLemonUps === 'number' && inventoryLemonUps >= 0) ? inventoryLemonUps : 0;
-        const validInventoryAdventurefuls = (typeof inventoryAdventurefuls === 'number' && inventoryAdventurefuls >= 0) ? inventoryAdventurefuls : 0;
-        const validInventoryExploremores = (typeof inventoryExploremores === 'number' && inventoryExploremores >= 0) ? inventoryExploremores : 0;
-        const validInventoryToffeetastic = (typeof inventoryToffeetastic === 'number' && inventoryToffeetastic >= 0) ? inventoryToffeetastic : 0;
+        const inventoryFields = [
+            inventoryThinMints, inventorySamoas, inventoryTagalongs,
+            inventoryTrefoils, inventoryDosiDos, inventoryLemonUps,
+            inventoryAdventurefuls, inventoryExploremores, inventoryToffeetastic
+        ];
+        const validatedInventory = inventoryFields.map(validateNumber);
 
         const stmt = db.prepare(`
             UPDATE profile
@@ -436,9 +436,7 @@ app.put('/api/profile', (req, res) => {
         `);
         stmt.run(
             photoData, qrCodeUrl, paymentQrCodeUrl, validGoalBoxes, validGoalAmount,
-            validInventoryThinMints, validInventorySamoas, validInventoryTagalongs,
-            validInventoryTrefoils, validInventoryDosiDos, validInventoryLemonUps,
-            validInventoryAdventurefuls, validInventoryExploremores, validInventoryToffeetastic
+            ...validatedInventory
         );
 
         const updatedProfile = db.prepare('SELECT * FROM profile WHERE id = 1').get();
