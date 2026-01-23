@@ -1896,19 +1896,18 @@ footer {
     font-size: 0.9rem;
 }
 
-/* Make number spinners always visible and prominent with blue color */
+/* Make number spinners always visible and prominent */
 .cookie-selection-table .qty-input::-webkit-inner-spin-button,
 .cookie-selection-table .qty-input::-webkit-outer-spin-button {
     opacity: 1;
     cursor: pointer;
-    width: 16px;
+    width: 18px;
     height: 100%;
-    filter: invert(38%) sepia(91%) saturate(2476%) hue-rotate(195deg) brightness(98%) contrast(99%);
 }
 
-.cookie-selection-table .qty-input::-webkit-inner-spin-button:hover,
-.cookie-selection-table .qty-input::-webkit-outer-spin-button:hover {
-    filter: invert(27%) sepia(86%) saturate(2867%) hue-rotate(199deg) brightness(92%) contrast(93%);
+/* Style for better visibility of arrows */
+.cookie-selection-table .qty-input {
+    accent-color: #2196F3;
 }
 
 /* For Firefox - keep the spinners visible */
