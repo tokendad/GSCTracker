@@ -1888,12 +1888,31 @@ footer {
 }
 
 .cookie-selection-table .qty-input {
-    width: 60px;
-    padding: 0.25rem;
+    width: 70px;
+    padding: 0.25rem 0.5rem;
     text-align: center;
     border: 1px solid var(--border-color);
     border-radius: 4px;
     font-size: 0.9rem;
+}
+
+/* Make number spinners always visible and prominent */
+.cookie-selection-table .qty-input::-webkit-inner-spin-button,
+.cookie-selection-table .qty-input::-webkit-outer-spin-button {
+    opacity: 1;
+    cursor: pointer;
+    width: 18px;
+    height: 100%;
+}
+
+/* Style for better visibility of arrows */
+.cookie-selection-table .qty-input {
+    accent-color: #2196F3;
+}
+
+/* For Firefox - keep the spinners visible */
+.cookie-selection-table .qty-input[type="number"] {
+    -moz-appearance: number-input;
 }
 
 .cookie-selection-table .qty-input:focus {
