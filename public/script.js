@@ -2229,8 +2229,13 @@ function renderSales() {
 
         // Determine actual status based on business logic
         // Check if order is truly complete (paid AND delivered)
-        const actuallyPaid = order.totalCollected >= order.totalDue || order.paymentStatus === 'Paid';
         const isOnline = order.orderSource === 'Online';
+
+        // Payment is considered complete when there's no balance due
+        // If amounts haven't been entered yet (both 0), default to not paid
+        const hasFinancialData = order.totalDue > 0 || order.totalCollected > 0;
+        const actuallyPaid = hasFinancialData && order.totalDue === 0;
+
         const actuallyDelivered = order.deliveryStatus === 'Delivered' || order.deliveryStatus === 'Shipped';
 
         // Derive display values from orderStatus and actual data
@@ -2247,8 +2252,8 @@ function renderSales() {
             displayDeliveryStatus = isOnline ? 'Shipped' : 'Delivered';
             displayOrderStatus = 'Shipped';
         } else {
-            // For Pending status, use actual values
-            displayPaymentStatus = actuallyPaid ? 'Paid' : (order.paymentStatus || 'Not Paid');
+            // For Pending status, use actual financial data as source of truth
+            displayPaymentStatus = actuallyPaid ? 'Paid' : 'Not Paid';
             displayDeliveryStatus = order.deliveryStatus || (isOnline ? 'Not Shipped' : 'Not Delivered');
 
             // Determine overall status from actual data
