@@ -424,6 +424,159 @@ section h2 {
     font-size: 0.875rem;
 }
 
+/* Inventory Reconciliation Section */
+.reconciliation-section {
+    margin-top: 2rem;
+}
+
+.reconciliation-subtitle {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.reconciliation-container {
+    margin-top: 1rem;
+}
+
+.reconciliation-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.summary-stat {
+    background: var(--card-background);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 2px solid var(--border-color);
+    text-align: center;
+}
+
+.summary-stat.alert {
+    border-color: #ff9800;
+    background: rgba(255, 152, 0, 0.1);
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.summary-stat.alert .stat-value {
+    color: #ff9800;
+}
+
+.reconciliation-table-container {
+    overflow-x: auto;
+    background: var(--card-background);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.reconciliation-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.reconciliation-table th,
+.reconciliation-table td {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    text-align: center;
+}
+
+.reconciliation-table th {
+    background-color: rgba(30, 123, 60, 0.05);
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.reconciliation-table .cookie-name-col {
+    text-align: left;
+    font-weight: 500;
+}
+
+.reconciliation-table tr.recon-row-shortage {
+    background-color: rgba(255, 152, 0, 0.1);
+}
+
+.recon-badge {
+    display: inline-block;
+    padding: 0.35rem 0.65rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.recon-badge.badge-shortage {
+    background-color: #fff3e0;
+    color: #e65100;
+    border: 1px solid #ffe0b2;
+}
+
+.recon-badge.badge-ok {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #c8e6c9;
+}
+
+/* Dark mode for reconciliation */
+[data-theme="dark"] .reconciliation-subtitle {
+    color: #aaa;
+}
+
+[data-theme="dark"] .summary-stat {
+    background: #2a2a2a;
+    border-color: #444;
+}
+
+[data-theme="dark"] .summary-stat.alert {
+    border-color: #ff9800;
+    background: rgba(255, 152, 0, 0.15);
+}
+
+[data-theme="dark"] .stat-label {
+    color: #aaa;
+}
+
+[data-theme="dark"] .stat-value {
+    color: var(--primary-color);
+}
+
+[data-theme="dark"] .reconciliation-table th {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .reconciliation-table tr.recon-row-shortage {
+    background-color: rgba(255, 152, 0, 0.15);
+}
+
+[data-theme="dark"] .recon-badge.badge-shortage {
+    background-color: #5d3a00;
+    color: #ffcc80;
+    border-color: #e65100;
+}
+
+[data-theme="dark"] .recon-badge.badge-ok {
+    background-color: #1b5e20;
+    color: #a5d6a7;
+    border-color: #2e7d32;
+}
+
 /* Profile Section */
 .profile-section .profile-content {
     display: grid;
@@ -543,6 +696,142 @@ section h2 {
     font-size: 0.75rem;
     font-weight: 600;
     margin-left: 0.5rem;
+}
+
+/* Status Badges */
+.status-badge {
+    display: inline-block;
+    padding: 0.35rem 0.65rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* Source Badges */
+.badge-source.badge-manual {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    border: 1px solid #bbdefb;
+}
+
+.badge-source.badge-online {
+    background-color: #f3e5f5;
+    color: #7b1fa2;
+    border: 1px solid #e1bee7;
+}
+
+/* Payment Badges */
+.badge-payment.badge-paid {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #c8e6c9;
+}
+
+.badge-payment.badge-unpaid {
+    background-color: #ffebee;
+    color: #c62828;
+    border: 1px solid #ffcdd2;
+}
+
+/* Delivery Badges */
+.badge-delivery.badge-delivered {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #c8e6c9;
+}
+
+.badge-delivery.badge-not-delivered {
+    background-color: #fff3e0;
+    color: #e65100;
+    border: 1px solid #ffe0b2;
+}
+
+.badge-delivery.badge-shipped {
+    background-color: #e1f5fe;
+    color: #0277bd;
+    border: 1px solid #b3e5fc;
+}
+
+.badge-delivery.badge-not-shipped {
+    background-color: #fff3e0;
+    color: #e65100;
+    border: 1px solid #ffe0b2;
+}
+
+/* Completion Badges */
+.badge-completed {
+    background-color: #4caf50;
+    color: white;
+    border: 1px solid #388e3c;
+}
+
+.badge-pending {
+    background-color: #ff9800;
+    color: white;
+    border: 1px solid #f57c00;
+}
+
+/* Dark mode status badges */
+[data-theme="dark"] .badge-source.badge-manual {
+    background-color: #1e3a5f;
+    color: #90caf9;
+    border-color: #2c5282;
+}
+
+[data-theme="dark"] .badge-source.badge-online {
+    background-color: #4a1a4a;
+    color: #ce93d8;
+    border-color: #6a2a6a;
+}
+
+[data-theme="dark"] .badge-payment.badge-paid {
+    background-color: #1b5e20;
+    color: #a5d6a7;
+    border-color: #2e7d32;
+}
+
+[data-theme="dark"] .badge-payment.badge-unpaid {
+    background-color: #7f0000;
+    color: #ef9a9a;
+    border-color: #c62828;
+}
+
+[data-theme="dark"] .badge-delivery.badge-delivered {
+    background-color: #1b5e20;
+    color: #a5d6a7;
+    border-color: #2e7d32;
+}
+
+[data-theme="dark"] .badge-delivery.badge-not-delivered {
+    background-color: #5d3a00;
+    color: #ffcc80;
+    border-color: #e65100;
+}
+
+[data-theme="dark"] .badge-delivery.badge-shipped {
+    background-color: #004d6d;
+    color: #81d4fa;
+    border-color: #0277bd;
+}
+
+[data-theme="dark"] .badge-delivery.badge-not-shipped {
+    background-color: #5d3a00;
+    color: #ffcc80;
+    border-color: #e65100;
+}
+
+[data-theme="dark"] .badge-completed {
+    background-color: #2e7d32;
+    color: #e8f5e9;
+    border-color: #1b5e20;
+}
+
+[data-theme="dark"] .badge-pending {
+    background-color: #e65100;
+    color: #fff3e0;
+    border-color: #bf360c;
 }
 
 /* Donations Section */
@@ -852,27 +1141,27 @@ section h2 {
     color: #1e7b3c !important;
 }
 
-.sales-table tr.status-shipped {
-    background-color: rgba(255, 193, 7, 0.2);
-}
-
-.sales-table tr.status-shipped a {
-    color: #856404 !important;
-}
-
-.sales-table tr.status-in-person {
+.sales-table tr.status-paid-pending-delivery {
     background-color: rgba(0, 123, 255, 0.15);
 }
 
-.sales-table tr.status-in-person a {
+.sales-table tr.status-paid-pending-delivery a {
     color: #004085 !important;
 }
 
-.sales-table tr.status-awaiting-payment {
+.sales-table tr.status-delivered-pending-payment {
+    background-color: rgba(255, 193, 7, 0.2);
+}
+
+.sales-table tr.status-delivered-pending-payment a {
+    color: #856404 !important;
+}
+
+.sales-table tr.status-pending {
     background-color: rgba(220, 53, 69, 0.15);
 }
 
-.sales-table tr.status-awaiting-payment a {
+.sales-table tr.status-pending a {
     color: #721c24 !important;
 }
 
@@ -885,27 +1174,27 @@ section h2 {
     color: #6fcf85 !important;
 }
 
-[data-theme="dark"] .sales-table tr.status-shipped {
-    background-color: rgba(255, 193, 7, 0.25);
-}
-
-[data-theme="dark"] .sales-table tr.status-shipped a {
-    color: #ffc107 !important;
-}
-
-[data-theme="dark"] .sales-table tr.status-in-person {
+[data-theme="dark"] .sales-table tr.status-paid-pending-delivery {
     background-color: rgba(0, 123, 255, 0.25);
 }
 
-[data-theme="dark"] .sales-table tr.status-in-person a {
+[data-theme="dark"] .sales-table tr.status-paid-pending-delivery a {
     color: #6cb2ff !important;
 }
 
-[data-theme="dark"] .sales-table tr.status-awaiting-payment {
+[data-theme="dark"] .sales-table tr.status-delivered-pending-payment {
+    background-color: rgba(255, 193, 7, 0.25);
+}
+
+[data-theme="dark"] .sales-table tr.status-delivered-pending-payment a {
+    color: #ffc107 !important;
+}
+
+[data-theme="dark"] .sales-table tr.status-pending {
     background-color: rgba(220, 53, 69, 0.25);
 }
 
-[data-theme="dark"] .sales-table tr.status-awaiting-payment a {
+[data-theme="dark"] .sales-table tr.status-pending a {
     color: #f5a3ab !important;
 }
 
@@ -939,15 +1228,15 @@ section h2 {
     background-color: rgba(40, 167, 69, 0.4);
 }
 
-.legend-color.status-shipped {
-    background-color: rgba(255, 193, 7, 0.5);
-}
-
-.legend-color.status-in-person {
+.legend-color.status-paid-pending-delivery {
     background-color: rgba(0, 123, 255, 0.4);
 }
 
-.legend-color.status-awaiting-payment {
+.legend-color.status-delivered-pending-payment {
+    background-color: rgba(255, 193, 7, 0.5);
+}
+
+.legend-color.status-pending {
     background-color: rgba(220, 53, 69, 0.4);
 }
 

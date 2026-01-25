@@ -412,6 +412,9 @@ function generatePDF(options) {
                     address: sale.customerAddress || '',
                     phone: sale.customerPhone || '',
                     paymentMethod: sale.paymentMethod || '',
+                    orderSource: sale.orderSource || 'Manual',
+                    paymentStatus: sale.paymentStatus || 'Not Paid',
+                    deliveryStatus: sale.deliveryStatus || 'Not Delivered',
                     cookies: {},
                     totalCollected: 0,
                     totalDue: 0
@@ -434,14 +437,14 @@ function generatePDF(options) {
             const totalBoxes = Object.values(order.cookies).reduce((sum, qty) => sum + qty, 0);
             const totalAmount = totalBoxes * PRICE_PER_BOX;
 
-            // Determine payment status based on amount collected vs total amount
-            let paymentStatus;
+            // Determine old payment status based on amount collected vs total amount (for backward compatibility)
+            let oldPaymentStatus;
             if (order.totalCollected >= totalAmount) {
-                paymentStatus = 'PAID';
+                oldPaymentStatus = 'PAID';
             } else if (order.totalCollected > 0) {
-                paymentStatus = 'PARTIAL';
+                oldPaymentStatus = 'PARTIAL';
             } else {
-                paymentStatus = 'UNPAID';
+                oldPaymentStatus = 'UNPAID';
             }
 
             doc.setFont(undefined, 'bold');
@@ -466,7 +469,14 @@ function generatePDF(options) {
             yPos = addText(`   Cookies: ${cookiesList}`, margin + 2, yPos, 8);
             yPos += 4;
 
-            yPos = addText(`   Total: ${totalBoxes} boxes = $${totalAmount.toFixed(2)} | Collected: $${order.totalCollected.toFixed(2)} | Due: $${order.totalDue.toFixed(2)} | ${paymentStatus}`, margin + 2, yPos, 8);
+            // Determine completion status
+            const isPaid = order.paymentStatus === 'Paid';
+            const isDelivered = (order.deliveryStatus === 'Delivered' || order.deliveryStatus === 'Shipped');
+            const completionStatus = (isPaid && isDelivered) ? 'COMPLETED' : 'PENDING';
+
+            yPos = addText(`   Total: ${totalBoxes} boxes = $${totalAmount.toFixed(2)} | Collected: $${order.totalCollected.toFixed(2)} | Due: $${order.totalDue.toFixed(2)}`, margin + 2, yPos, 8);
+            yPos += 4;
+            yPos = addText(`   Source: ${order.orderSource} | Payment: ${order.paymentStatus} | Delivery: ${order.deliveryStatus} | Status: ${completionStatus}`, margin + 2, yPos, 8);
             yPos += 6;
 
             orderNum++;
@@ -701,6 +711,9 @@ function generateExcel(options) {
                     address: sale.customerAddress || '',
                     phone: sale.customerPhone || '',
                     paymentMethod: sale.paymentMethod || '',
+                    orderSource: sale.orderSource || 'Manual',
+                    paymentStatus: sale.paymentStatus || 'Not Paid',
+                    deliveryStatus: sale.deliveryStatus || 'Not Delivered',
                     cookies: {},
                     totalCollected: 0,
                     totalDue: 0
@@ -720,7 +733,7 @@ function generateExcel(options) {
                             'Lemon-Ups', 'Adventurefuls', 'Exploremores', 'Toffee-tastic', 'Donated Cookies'];
 
         const salesData = [
-            ['Customer Name', 'Address', 'Phone', ...cookieTypes, 'Total Boxes', 'Total Amount', 'Collected', 'Due', 'Payment Method', 'Status']
+            ['Customer Name', 'Address', 'Phone', ...cookieTypes, 'Total Boxes', 'Total Amount', 'Collected', 'Due', 'Payment Method', 'Order Source', 'Payment Status', 'Delivery Status', 'Completion Status']
         ];
 
         // Add each customer order as a row
@@ -740,15 +753,20 @@ function generateExcel(options) {
 
             const totalAmount = totalBoxes * PRICE_PER_BOX;
 
-            // Determine payment status based on amount collected vs total amount
-            let paymentStatus;
+            // Determine old payment status based on amount collected vs total amount (for backward compatibility)
+            let oldPaymentStatus;
             if (order.totalCollected >= totalAmount) {
-                paymentStatus = 'PAID';
+                oldPaymentStatus = 'PAID';
             } else if (order.totalCollected > 0) {
-                paymentStatus = 'PARTIAL';
+                oldPaymentStatus = 'PARTIAL';
             } else {
-                paymentStatus = 'UNPAID';
+                oldPaymentStatus = 'UNPAID';
             }
+
+            // Determine completion status based on payment and delivery
+            const isPaid = order.paymentStatus === 'Paid';
+            const isDelivered = (order.deliveryStatus === 'Delivered' || order.deliveryStatus === 'Shipped');
+            const completionStatus = (isPaid && isDelivered) ? 'COMPLETED' : 'PENDING';
 
             row.push(
                 totalBoxes,
@@ -756,7 +774,10 @@ function generateExcel(options) {
                 order.totalCollected,
                 order.totalDue,
                 order.paymentMethod,
-                paymentStatus
+                order.orderSource,
+                order.paymentStatus,
+                order.deliveryStatus,
+                completionStatus
             );
 
             salesData.push(row);
@@ -765,9 +786,9 @@ function generateExcel(options) {
         const ws = XLSX.utils.aoa_to_sheet(salesData);
 
         // Format currency columns (Total Amount, Collected, Due)
-        const totalAmountCol = 13; // Column M (0-indexed: 12, but Excel format needs 13)
-        const collectedCol = 14; // Column N
-        const dueCol = 15; // Column O
+        const totalAmountCol = 14; // Column O (after 10 cookie types + Customer/Address/Phone + Total Boxes)
+        const collectedCol = 15; // Column P
+        const dueCol = 16; // Column Q
 
         for (let i = 2; i <= salesData.length; i++) {
             const colLetterAmount = XLSX.utils.encode_col(totalAmountCol);
@@ -887,6 +908,7 @@ async function init() {
     renderPaymentMethodsSettings();
     updateSummary();
     updateBreakdown();
+    updateInventoryReconciliation();
     updateGoalDisplay();
     setupEventListeners();
 }
@@ -2158,8 +2180,9 @@ function renderSales() {
                 key: key,
                 customerName: sale.customerName || 'Walk-in Customer',
                 date: sale.date,
-                orderType: sale.orderType || 'Manual',
-                orderStatus: sale.orderStatus || 'Pending',
+                orderSource: sale.orderSource || 'Manual',
+                paymentStatus: sale.paymentStatus || 'Not Paid',
+                deliveryStatus: sale.deliveryStatus || (sale.orderSource === 'Online' ? 'Not Shipped' : 'Not Delivered'),
                 items: [],
                 totalBoxes: 0,
                 totalDue: 0,
@@ -2170,14 +2193,6 @@ function renderSales() {
         orders[key].totalBoxes += convertToBoxes(sale);
         orders[key].totalDue += sale.amountDue || 0;
         orders[key].totalCollected += sale.amountCollected || 0;
-
-        // If any item has Shipped status, mark the whole order as shipped
-        if (sale.orderType && sale.orderType.toLowerCase().includes('shipped')) {
-            orders[key].orderStatus = 'Shipped';
-        }
-        if (sale.orderStatus === 'Shipped' || sale.orderStatus === 'Delivered') {
-            orders[key].orderStatus = sale.orderStatus;
-        }
     });
 
     // Sort orders by date (newest first)
@@ -2192,8 +2207,10 @@ function renderSales() {
                         <th>Customer Name</th>
                         <th>Total Boxes</th>
                         <th>Order Date</th>
-                        <th>Order Type</th>
-                        <th>Order Complete</th>
+                        <th>Source</th>
+                        <th>Payment</th>
+                        <th>Delivery</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -2207,29 +2224,29 @@ function renderSales() {
             year: 'numeric'
         });
 
-        // Check if order is shipped or delivered
-        const isShipped = order.orderType && order.orderType.toLowerCase().includes('shipped');
-        const isInPerson = order.orderType && order.orderType.toLowerCase().includes('in-person');
-        const isComplete = order.orderStatus === 'Shipped' || order.orderStatus === 'Delivered' || isShipped;
-        const hasOutstandingPayment = order.totalDue > 0;
+        // Check if order is complete using the first sale item
+        const firstSale = order.items[0];
+        const isComplete = isOrderComplete(firstSale);
 
         // Determine status class for row coloring
-        // Priority: Awaiting Payment (red) > Complete (green) > Shipped (yellow) > In-Person (blue)
         let statusClass = '';
-        if (hasOutstandingPayment && !isComplete) {
-            statusClass = 'status-awaiting-payment';
-        } else if (isComplete) {
+        if (isComplete) {
             statusClass = 'status-complete';
-        } else if (isShipped) {
-            statusClass = 'status-shipped';
-        } else if (isInPerson) {
-            statusClass = 'status-in-person';
+        } else if (order.paymentStatus === 'Paid' && (order.deliveryStatus === 'Not Delivered' || order.deliveryStatus === 'Not Shipped')) {
+            statusClass = 'status-paid-pending-delivery';
+        } else if (order.paymentStatus === 'Not Paid' && (order.deliveryStatus === 'Delivered' || order.deliveryStatus === 'Shipped')) {
+            statusClass = 'status-delivered-pending-payment';
+        } else {
+            statusClass = 'status-pending';
         }
 
-        // Determine button text and state
-        const buttonText = isComplete ? 'Completed' : 'Mark Complete';
-        const buttonClass = isComplete ? 'btn-complete-done' : 'btn-complete';
-        const buttonDisabled = isShipped ? 'disabled title="Shipped orders are automatically complete"' : '';
+        // Create status badges
+        const sourceBadge = `<span class="status-badge badge-source badge-${order.orderSource.toLowerCase()}">${order.orderSource}</span>`;
+        const paymentBadge = `<span class="status-badge badge-payment badge-${order.paymentStatus === 'Paid' ? 'paid' : 'unpaid'}">${order.paymentStatus}</span>`;
+        const deliveryBadge = `<span class="status-badge badge-delivery badge-${order.deliveryStatus.toLowerCase().replace(/\s+/g, '-')}">${order.deliveryStatus}</span>`;
+        const completionBadge = isComplete
+            ? '<span class="status-badge badge-completed">✓ Completed</span>'
+            : '<span class="status-badge badge-pending">⧖ Pending</span>';
 
         html += `
             <tr class="${statusClass}" data-order-key="${order.key}">
@@ -2238,14 +2255,10 @@ function renderSales() {
                 </td>
                 <td>${order.totalBoxes}</td>
                 <td>${formattedDate}</td>
-                <td>${order.orderType}</td>
-                <td>
-                    <button class="btn-order-status ${buttonClass}"
-                        ${buttonDisabled}
-                        onclick="handleOrderComplete('${order.key}', ${!isComplete})">
-                        ${buttonText}
-                    </button>
-                </td>
+                <td>${sourceBadge}</td>
+                <td>${paymentBadge}</td>
+                <td>${deliveryBadge}</td>
+                <td>${completionBadge}</td>
             </tr>
         `;
     });
@@ -2255,10 +2268,10 @@ function renderSales() {
             </table>
         </div>
         <div class="status-legend">
-            <span class="legend-item"><span class="legend-color status-complete"></span> Complete</span>
-            <span class="legend-item"><span class="legend-color status-shipped"></span> Shipped</span>
-            <span class="legend-item"><span class="legend-color status-in-person"></span> In-Person</span>
-            <span class="legend-item"><span class="legend-color status-awaiting-payment"></span> Awaiting Payment</span>
+            <span class="legend-item"><span class="legend-color status-complete"></span> Completed</span>
+            <span class="legend-item"><span class="legend-color status-paid-pending-delivery"></span> Paid, Awaiting Delivery</span>
+            <span class="legend-item"><span class="legend-color status-delivered-pending-payment"></span> Delivered, Awaiting Payment</span>
+            <span class="legend-item"><span class="legend-color status-pending"></span> Pending</span>
         </div>
     `;
 
@@ -2867,6 +2880,119 @@ function updateBreakdown() {
             <span class="breakdown-quantity">${quantity} box${quantity > 1 ? 'es' : ''}</span>
         </div>
     `).join('');
+}
+
+// Update inventory reconciliation view
+function updateInventoryReconciliation() {
+    const reconciliationElement = document.getElementById('inventoryReconciliation');
+    if (!reconciliationElement) return;
+
+    // Get pending sales (not completed)
+    const pendingSales = sales.filter(sale => !isOrderComplete(sale));
+
+    if (pendingSales.length === 0) {
+        reconciliationElement.innerHTML = '<p class="empty-message">✓ No pending orders. All orders are completed!</p>';
+        return;
+    }
+
+    // Calculate boxes needed per cookie type for pending orders
+    const pendingNeeds = {};
+    pendingSales.forEach(sale => {
+        const boxes = convertToBoxes(sale);
+        const type = sale.cookieType;
+        if (!pendingNeeds[type]) {
+            pendingNeeds[type] = 0;
+        }
+        pendingNeeds[type] += boxes;
+    });
+
+    // Get current inventory from profile
+    const currentInventory = {
+        'Thin Mints': (profile && profile.inventoryThinMints) || 0,
+        'Samoas': (profile && profile.inventorySamoas) || 0,
+        'Tagalongs': (profile && profile.inventoryTagalongs) || 0,
+        'Trefoils': (profile && profile.inventoryTrefoils) || 0,
+        'Do-si-dos': (profile && profile.inventoryDosiDos) || 0,
+        'Lemon-Ups': (profile && profile.inventoryLemonUps) || 0,
+        'Adventurefuls': (profile && profile.inventoryAdventurefuls) || 0,
+        'Exploremores': (profile && profile.inventoryExploremores) || 0,
+        'Toffee-tastic': (profile && profile.inventoryToffeetastic) || 0
+    };
+
+    // Calculate shortage/surplus for each cookie type
+    const reconciliation = [];
+    Object.keys(pendingNeeds).forEach(cookieType => {
+        const needed = pendingNeeds[cookieType];
+        const onHand = currentInventory[cookieType] || 0;
+        const shortage = needed - onHand;
+
+        reconciliation.push({
+            cookieType,
+            needed,
+            onHand,
+            shortage,
+            status: shortage > 0 ? 'short' : 'ok'
+        });
+    });
+
+    // Sort by shortage (most critical first)
+    reconciliation.sort((a, b) => b.shortage - a.shortage);
+
+    // Build HTML
+    let html = `
+        <div class="reconciliation-summary">
+            <div class="summary-stat">
+                <span class="stat-label">Pending Orders</span>
+                <span class="stat-value">${pendingSales.length}</span>
+            </div>
+            <div class="summary-stat">
+                <span class="stat-label">Cookie Types Needed</span>
+                <span class="stat-value">${Object.keys(pendingNeeds).length}</span>
+            </div>
+            <div class="summary-stat alert">
+                <span class="stat-label">Shortages</span>
+                <span class="stat-value">${reconciliation.filter(r => r.status === 'short').length}</span>
+            </div>
+        </div>
+        <div class="reconciliation-table-container">
+            <table class="reconciliation-table">
+                <thead>
+                    <tr>
+                        <th>Cookie Type</th>
+                        <th>Needed</th>
+                        <th>On Hand</th>
+                        <th>Shortage</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    reconciliation.forEach(item => {
+        const statusBadge = item.status === 'short'
+            ? `<span class="recon-badge badge-shortage">⚠ Order ${item.shortage} boxes</span>`
+            : `<span class="recon-badge badge-ok">✓ Sufficient</span>`;
+
+        const rowClass = item.status === 'short' ? 'recon-row-shortage' : '';
+
+        html += `
+            <tr class="${rowClass}">
+                <td class="cookie-name-col">${item.cookieType}</td>
+                <td>${item.needed}</td>
+                <td>${item.onHand}</td>
+                <td>${item.shortage > 0 ? item.shortage : '—'}</td>
+                <td>${statusBadge}</td>
+            </tr>
+        `;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    reconciliationElement.innerHTML = html;
 }
 
 // Show feedback message (simple toast-like notification)
