@@ -2565,3 +2565,220 @@ footer {
     color: var(--text-color);
     border-color: #555;
 }
+/* Export Modal Styles */
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background-color: var(--card-background);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 550px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--text-color);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    cursor: pointer;
+    color: var(--text-color);
+    line-height: 1;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.modal-close:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.modal-body {
+    padding: 24px;
+}
+
+.modal-body > p {
+    margin-top: 0;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+}
+
+.export-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.export-option {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background-color: var(--background-color);
+}
+
+.export-option:hover {
+    border-color: var(--primary-color);
+    background-color: var(--card-background);
+}
+
+.export-option input[type="checkbox"] {
+    margin: 0;
+    margin-right: 12px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.export-option-label {
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+}
+
+.export-option-label::before {
+    content: '';
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    margin-right: 12px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.export-option input[type="checkbox"]:checked + .export-option-label::before {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='white' d='M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.export-option input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.export-option-desc {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-left: 30px;
+}
+
+.export-format {
+    border-top: 1px solid var(--border-color);
+    padding-top: 20px;
+}
+
+.export-format h3 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    font-size: 1.125rem;
+    color: var(--text-color);
+}
+
+.format-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.export-format-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    font-size: 1rem;
+}
+
+.export-format-btn span {
+    font-size: 1.25rem;
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .modal-close:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .export-option:hover {
+    background-color: #2a2a2a;
+}
+
+@media (max-width: 640px) {
+    .modal-content {
+        width: 95%;
+        max-height: 95vh;
+    }
+
+    .modal-header {
+        padding: 16px;
+    }
+
+    .modal-body {
+        padding: 16px;
+    }
+
+    .format-buttons {
+        grid-template-columns: 1fr;
+    }
+}

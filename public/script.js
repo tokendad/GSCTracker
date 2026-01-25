@@ -95,68 +95,39 @@ const remainingCasesInput = document.getElementById('remainingCases');
 const eventDonationsInput = document.getElementById('eventDonations');
 const eventsList = document.getElementById('eventsList');
 
-// Generate PDF Summary Report
-function generatePDFSummary() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    
-    // Set up document
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 20;
-    let yPos = margin;
-    
-    // Helper function to add text with automatic page break
-    function addText(text, x, y, fontSize = 12, style = 'normal') {
-        if (y > pageHeight - margin) {
-            doc.addPage();
-            y = margin;
-        }
-        doc.setFontSize(fontSize);
-        doc.setFont(undefined, style);
-        doc.text(text, x, y);
-        return y;
+// ====================
+// EXPORT MODAL FUNCTIONS
+// ====================
+
+function openExportModal() {
+    const modal = document.getElementById('exportModal');
+    if (modal) {
+        modal.style.display = 'flex';
     }
-    
-    // Helper function to add a line
-    function addLine(y, padding = 5) {
-        if (y + padding > pageHeight - margin) {
-            doc.addPage();
-            return margin + padding + 5;
-        }
-        doc.setDrawColor(200, 200, 200);
-        doc.line(margin, y + padding, pageWidth - margin, y + padding);
-        return y + padding + 5;
+}
+
+function closeExportModal() {
+    const modal = document.getElementById('exportModal');
+    if (modal) {
+        modal.style.display = 'none';
     }
-    
-    // Title
-    doc.setFillColor(30, 123, 60); // Girl Scout green
-    doc.rect(0, 0, pageWidth, 30, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(20);
-    doc.setFont(undefined, 'bold');
-    doc.text('🍪 Girl Scout Cookie Sales Summary', pageWidth / 2, 20, { align: 'center' });
-    
-    yPos = 40;
-    doc.setTextColor(0, 0, 0);
-    
-    // Date
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    const reportDate = new Date().toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-    });
-    doc.text(`Report Generated: ${reportDate}`, margin, yPos);
-    yPos += 15;
-    
-    // Sales Summary Section
-    doc.setFontSize(16);
-    doc.setFont(undefined, 'bold');
-    doc.text('Sales Summary', margin, yPos);
-    yPos += 10;
-    
+}
+
+function getExportOptions() {
+    return {
+        basicSummary: document.getElementById('exportBasicSummary')?.checked || false,
+        cookieBreakdown: document.getElementById('exportCookieBreakdown')?.checked || false,
+        individualDetails: document.getElementById('exportIndividualDetails')?.checked || false,
+        eventDetails: document.getElementById('exportEventDetails')?.checked || false,
+        inventory: document.getElementById('exportInventory')?.checked || false
+    };
+}
+
+// ====================
+// EXPORT DATA GATHERING
+// ====================
+
+function gatherExportData() {
     // Calculate sales totals
     const salesBoxes = sales.reduce((sum, sale) => sum + convertToBoxes(sale), 0);
     const donationBoxes = donations.reduce((sum, donation) => sum + (donation.boxCount || 0), 0);
@@ -166,136 +137,524 @@ function generatePDFSummary() {
         return sum + Math.max(0, totalInitial - totalRemaining);
     }, 0);
     const totalBoxes = salesBoxes + donationBoxes + eventBoothBoxes;
-    
+
     const individualBoxes = sales.filter(s => s.saleType === 'individual').reduce((sum, sale) => sum + convertToBoxes(sale), 0);
     const eventBoxes = sales.filter(s => s.saleType === 'event').reduce((sum, sale) => sum + convertToBoxes(sale), 0);
-    
+
     const salesRevenue = salesBoxes * PRICE_PER_BOX;
     const eventBoothRevenue = eventBoothBoxes * PRICE_PER_BOX;
     const totalDonationAmount = donations.reduce((sum, donation) => sum + donation.amount, 0);
     const eventDonationsAmount = events.reduce((sum, event) => sum + (event.donationsReceived || 0), 0);
     const totalRevenue = salesRevenue + eventBoothRevenue + totalDonationAmount + eventDonationsAmount;
-    
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'normal');
-    yPos = addText(`Total Boxes Sold: ${totalBoxes}`, margin + 5, yPos);
-    yPos += 7;
-    yPos = addText(`Individual Sales: ${individualBoxes} boxes`, margin + 5, yPos);
-    yPos += 7;
-    yPos = addText(`Event Sales: ${eventBoxes + eventBoothBoxes} boxes`, margin + 5, yPos);
-    yPos += 7;
+
+    // Calculate breakdown by cookie type across all sales channels
+    const cookieBreakdown = {};
+    const cookieTypes = ['Thin Mints', 'Samoas', 'Tagalongs', 'Trefoils', 'Do-si-dos', 'Lemon-Ups', 'Adventurefuls', 'Exploremores', 'Toffee-tastic'];
+
+    cookieTypes.forEach(type => {
+        cookieBreakdown[type] = {
+            individual: 0,
+            event: 0,
+            eventBooth: 0,
+            total: 0
+        };
+    });
+
+    // Individual and manual event sales
+    sales.forEach(sale => {
+        const boxes = convertToBoxes(sale);
+        const type = sale.cookieType;
+        if (!cookieBreakdown[type]) {
+            cookieBreakdown[type] = { individual: 0, event: 0, eventBooth: 0, total: 0 };
+        }
+        if (sale.saleType === 'individual') {
+            cookieBreakdown[type].individual += boxes;
+        } else {
+            cookieBreakdown[type].event += boxes;
+        }
+        cookieBreakdown[type].total += boxes;
+    });
+
+    // Event booth sales by variety
+    events.forEach(event => {
+        const varieties = ['ThinMints', 'Samoas', 'Tagalongs', 'Trefoils', 'DosiDos', 'LemonUps', 'Adventurefuls', 'Exploremores', 'Toffeetastic'];
+        const varietyNames = ['Thin Mints', 'Samoas', 'Tagalongs', 'Trefoils', 'Do-si-dos', 'Lemon-Ups', 'Adventurefuls', 'Exploremores', 'Toffee-tastic'];
+
+        varieties.forEach((variety, idx) => {
+            const initial = (event[`initial${variety}`] || 0);
+            const remaining = (event[`remaining${variety}`] || 0);
+            const sold = Math.max(0, initial - remaining);
+            const cookieName = varietyNames[idx];
+
+            if (!cookieBreakdown[cookieName]) {
+                cookieBreakdown[cookieName] = { individual: 0, event: 0, eventBooth: 0, total: 0 };
+            }
+            cookieBreakdown[cookieName].eventBooth += sold;
+            cookieBreakdown[cookieName].total += sold;
+        });
+    });
+
+    return {
+        totalBoxes,
+        individualBoxes,
+        eventBoxes,
+        eventBoothBoxes,
+        totalRevenue,
+        salesRevenue,
+        eventBoothRevenue,
+        totalDonationAmount,
+        eventDonationsAmount,
+        cookieBreakdown,
+        sales,
+        events,
+        profile
+    };
+}
+
+// ====================
+// PDF EXPORT
+// ====================
+
+function handleExportPDF() {
+    const options = getExportOptions();
+
+    // Check if at least one option is selected
+    if (!Object.values(options).some(v => v)) {
+        alert('Please select at least one section to export.');
+        return;
+    }
+
+    generatePDF(options);
+    closeExportModal();
+}
+
+function generatePDF(options) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    let yPos = margin;
+
+    // Helper function to add text with automatic page break
+    function addText(text, x, y, fontSize = 10, style = 'normal') {
+        if (y > pageHeight - margin - 10) {
+            doc.addPage();
+            y = margin;
+        }
+        doc.setFontSize(fontSize);
+        doc.setFont(undefined, style);
+
+        // Handle long text wrapping
+        const maxWidth = pageWidth - (2 * margin);
+        const lines = doc.splitTextToSize(text, maxWidth);
+
+        lines.forEach((line, idx) => {
+            if (y > pageHeight - margin - 10) {
+                doc.addPage();
+                y = margin;
+            }
+            doc.text(line, x, y);
+            if (idx < lines.length - 1) {
+                y += fontSize * 0.5;
+            }
+        });
+
+        return y;
+    }
+
+    // Helper function to add a line
+    function addLine(y, padding = 3) {
+        if (y + padding > pageHeight - margin) {
+            doc.addPage();
+            return margin + padding + 3;
+        }
+        doc.setDrawColor(200, 200, 200);
+        doc.line(margin, y + padding, pageWidth - margin, y + padding);
+        return y + padding + 3;
+    }
+
+    // Title header
+    doc.setFillColor(30, 123, 60);
+    doc.rect(0, 0, pageWidth, 25, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
     doc.setFont(undefined, 'bold');
-    yPos = addText(`Total Revenue: $${totalRevenue.toFixed(2)}`, margin + 5, yPos);
+    doc.text('Girl Scout Cookie Sales Report', pageWidth / 2, 16, { align: 'center' });
+
+    yPos = 35;
+    doc.setTextColor(0, 0, 0);
+
+    // Date
+    doc.setFontSize(9);
     doc.setFont(undefined, 'normal');
-    yPos += 7;
-    yPos = addText(`Total Donations: $${(totalDonationAmount + eventDonationsAmount).toFixed(2)}`, margin + 5, yPos);
-    yPos += 10;
-    
-    yPos = addLine(yPos);
-    
-    // Cookie Breakdown Section
-    if (sales.length > 0) {
-        doc.setFontSize(16);
+    const reportDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric'
+    });
+    doc.text(`Generated: ${reportDate}`, margin, yPos);
+    yPos += 12;
+
+    const data = gatherExportData();
+
+    // Basic Summary
+    if (options.basicSummary) {
+        doc.setFontSize(14);
         doc.setFont(undefined, 'bold');
-        yPos = addText('Cookie Breakdown', margin, yPos);
-        yPos += 10;
-        
-        // Calculate breakdown by cookie type
-        const breakdown = {};
-        sales.forEach(sale => {
-            const boxes = convertToBoxes(sale);
-            breakdown[sale.cookieType] = (breakdown[sale.cookieType] || 0) + boxes;
-        });
-        
-        const sortedBreakdown = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
-        
-        doc.setFontSize(12);
+        yPos = addText('Sales Summary', margin, yPos, 14, 'bold');
+        yPos += 8;
+
+        doc.setFontSize(10);
         doc.setFont(undefined, 'normal');
-        sortedBreakdown.forEach(([cookieType, quantity]) => {
-            yPos = addText(`${cookieType}: ${quantity} box${quantity !== 1 ? 'es' : ''}`, margin + 5, yPos);
-            yPos += 7;
-        });
-        
-        yPos += 3;
+        yPos = addText(`Total Boxes Sold: ${data.totalBoxes}`, margin + 3, yPos);
+        yPos += 6;
+        yPos = addText(`Individual Sales: ${data.individualBoxes} boxes`, margin + 3, yPos);
+        yPos += 6;
+        yPos = addText(`Event Sales: ${data.eventBoxes + data.eventBoothBoxes} boxes (${data.eventBoxes} manual + ${data.eventBoothBoxes} booth)`, margin + 3, yPos);
+        yPos += 6;
+        doc.setFont(undefined, 'bold');
+        yPos = addText(`Total Revenue: $${data.totalRevenue.toFixed(2)}`, margin + 3, yPos, 10, 'bold');
+        doc.setFont(undefined, 'normal');
+        yPos += 6;
+        yPos = addText(`  Sales Revenue: $${(data.salesRevenue + data.eventBoothRevenue).toFixed(2)}`, margin + 3, yPos);
+        yPos += 6;
+        yPos = addText(`  Donations: $${(data.totalDonationAmount + data.eventDonationsAmount).toFixed(2)}`, margin + 3, yPos);
+        yPos += 8;
         yPos = addLine(yPos);
     }
-    
-    // Event Totals Section
-    if (events.length > 0) {
-        doc.setFontSize(16);
+
+    // Cookie Breakdown
+    if (options.cookieBreakdown && Object.keys(data.cookieBreakdown).length > 0) {
+        doc.setFontSize(14);
         doc.setFont(undefined, 'bold');
-        yPos = addText('Event Totals', margin, yPos);
-        yPos += 10;
-        
-        doc.setFontSize(12);
+        yPos = addText('Cookie Breakdown by Type', margin, yPos, 14, 'bold');
+        yPos += 8;
+
+        const sortedCookies = Object.entries(data.cookieBreakdown)
+            .filter(([, counts]) => counts.total > 0)
+            .sort((a, b) => b[1].total - a[1].total);
+
+        doc.setFontSize(10);
         doc.setFont(undefined, 'normal');
-        
-        events.forEach(event => {
+
+        sortedCookies.forEach(([cookieType, counts]) => {
+            doc.setFont(undefined, 'bold');
+            yPos = addText(`${cookieType}: ${counts.total} boxes`, margin + 3, yPos, 10, 'bold');
+            yPos += 5;
+            doc.setFont(undefined, 'normal');
+            yPos = addText(`  Individual: ${counts.individual} | Event Manual: ${counts.event} | Event Booth: ${counts.eventBooth}`, margin + 5, yPos, 9);
+            yPos += 7;
+        });
+
+        yPos += 2;
+        yPos = addLine(yPos);
+    }
+
+    // Individual Sales Detail
+    if (options.individualDetails && data.sales.length > 0) {
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        yPos = addText('Individual Sales Detail', margin, yPos, 14, 'bold');
+        yPos += 8;
+
+        doc.setFontSize(9);
+
+        data.sales.forEach((sale, idx) => {
+            const boxes = convertToBoxes(sale);
+            const total = boxes * PRICE_PER_BOX;
+            const amountDue = sale.amountDue || 0;
+            const paymentStatus = amountDue > 0 ? 'PARTIAL' : 'PAID';
+
+            doc.setFont(undefined, 'bold');
+            yPos = addText(`${idx + 1}. ${sale.customerName || 'Anonymous'}`, margin + 3, yPos, 9, 'bold');
+            yPos += 5;
+
+            doc.setFont(undefined, 'normal');
+            yPos = addText(`   ${sale.cookieType} - ${boxes} boxes @ $${PRICE_PER_BOX}/box = $${total.toFixed(2)}`, margin + 3, yPos, 9);
+            yPos += 5;
+
+            if (sale.customerAddress) {
+                yPos = addText(`   Address: ${sale.customerAddress}`, margin + 3, yPos, 9);
+                yPos += 5;
+            }
+            if (sale.customerPhone) {
+                yPos = addText(`   Phone: ${sale.customerPhone}`, margin + 3, yPos, 9);
+                yPos += 5;
+            }
+
+            yPos = addText(`   Payment: ${sale.paymentMethod || 'N/A'} | Collected: $${(sale.amountCollected || 0).toFixed(2)} | Due: $${amountDue.toFixed(2)} | Status: ${paymentStatus}`, margin + 3, yPos, 9);
+            yPos += 7;
+        });
+
+        yPos += 2;
+        yPos = addLine(yPos);
+    }
+
+    // Event Sales Detail
+    if (options.eventDetails && data.events.length > 0) {
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        yPos = addText('Event Sales Detail', margin, yPos, 14, 'bold');
+        yPos += 8;
+
+        doc.setFontSize(9);
+
+        data.events.forEach(event => {
             const totalInitial = (event.initialBoxes || 0) + ((event.initialCases || 0) * BOXES_PER_CASE);
             const totalRemaining = (event.remainingBoxes || 0) + ((event.remainingCases || 0) * BOXES_PER_CASE);
-            const soldBoxes = Math.max(0, totalInitial - totalRemaining);
-            const eventRevenue = soldBoxes * PRICE_PER_BOX + (event.donationsReceived || 0);
-            
+            const totalSold = Math.max(0, totalInitial - totalRemaining);
+            const eventRevenue = totalSold * PRICE_PER_BOX + (event.donationsReceived || 0);
+
             doc.setFont(undefined, 'bold');
-            yPos = addText(`${event.eventName}`, margin + 5, yPos);
-            yPos += 7;
+            yPos = addText(`${event.eventName}`, margin + 3, yPos, 10, 'bold');
+            yPos += 5;
+
             doc.setFont(undefined, 'normal');
-            yPos = addText(`  Date: ${new Date(event.eventDate).toLocaleDateString()}`, margin + 5, yPos);
-            yPos += 7;
-            yPos = addText(`  Boxes Sold: ${soldBoxes}`, margin + 5, yPos);
-            yPos += 7;
-            yPos = addText(`  Revenue: $${eventRevenue.toFixed(2)}`, margin + 5, yPos);
-            if (event.donationsReceived > 0) {
-                yPos += 7;
-                yPos = addText(`  Donations: $${event.donationsReceived.toFixed(2)}`, margin + 5, yPos);
+            yPos = addText(`   Date: ${new Date(event.eventDate).toLocaleString()}`, margin + 3, yPos, 9);
+            yPos += 5;
+
+            if (event.description) {
+                yPos = addText(`   Description: ${event.description}`, margin + 3, yPos, 9);
+                yPos += 5;
             }
-            yPos += 10;
+
+            yPos = addText(`   Total Boxes Sold: ${totalSold} | Revenue: $${eventRevenue.toFixed(2)}`, margin + 3, yPos, 9);
+            yPos += 5;
+
+            // Variety breakdown
+            const varieties = ['ThinMints', 'Samoas', 'Tagalongs', 'Trefoils', 'DosiDos', 'LemonUps', 'Adventurefuls', 'Exploremores', 'Toffeetastic'];
+            const varietyNames = ['Thin Mints', 'Samoas', 'Tagalongs', 'Trefoils', 'Do-si-dos', 'Lemon-Ups', 'Adventurefuls', 'Exploremores', 'Toffee-tastic'];
+
+            yPos = addText(`   By Cookie Type:`, margin + 3, yPos, 9);
+            yPos += 5;
+
+            varieties.forEach((variety, idx) => {
+                const initial = event[`initial${variety}`] || 0;
+                const remaining = event[`remaining${variety}`] || 0;
+                const sold = Math.max(0, initial - remaining);
+
+                if (sold > 0) {
+                    yPos = addText(`     ${varietyNames[idx]}: ${sold} boxes (${initial} initial - ${remaining} remaining)`, margin + 3, yPos, 8);
+                    yPos += 5;
+                }
+            });
+
+            if (event.donationsReceived > 0) {
+                yPos = addText(`   Donations: $${event.donationsReceived.toFixed(2)}`, margin + 3, yPos, 9);
+                yPos += 5;
+            }
+
+            yPos += 3;
         });
-        
+
         yPos = addLine(yPos);
     }
-    
-    // On-Hand Inventory Section
-    if (profile) {
-        doc.setFontSize(16);
+
+    // Inventory
+    if (options.inventory && data.profile) {
+        doc.setFontSize(14);
         doc.setFont(undefined, 'bold');
-        yPos = addText('On-Hand Inventory', margin, yPos);
-        yPos += 10;
-        
+        yPos = addText('Current On-Hand Inventory', margin, yPos, 14, 'bold');
+        yPos += 8;
+
         const inventoryFields = [
-            { key: 'ThinMints', name: 'Thin Mints®' },
-            { key: 'Samoas', name: 'Samoas®' },
-            { key: 'Tagalongs', name: 'Tagalongs®' },
-            { key: 'Trefoils', name: 'Trefoils®' },
-            { key: 'DosiDos', name: 'Do-si-dos®' },
-            { key: 'LemonUps', name: 'Lemon-Ups®' },
-            { key: 'Adventurefuls', name: 'Adventurefuls®' },
-            { key: 'Exploremores', name: 'Exploremores™' },
-            { key: 'Toffeetastic', name: 'Toffee-tastic®' }
+            { key: 'ThinMints', name: 'Thin Mints' },
+            { key: 'Samoas', name: 'Samoas' },
+            { key: 'Tagalongs', name: 'Tagalongs' },
+            { key: 'Trefoils', name: 'Trefoils' },
+            { key: 'DosiDos', name: 'Do-si-dos' },
+            { key: 'LemonUps', name: 'Lemon-Ups' },
+            { key: 'Adventurefuls', name: 'Adventurefuls' },
+            { key: 'Exploremores', name: 'Exploremores' },
+            { key: 'Toffeetastic', name: 'Toffee-tastic' }
         ];
-        
-        doc.setFontSize(12);
+
+        doc.setFontSize(10);
         doc.setFont(undefined, 'normal');
-        
+
         let hasInventory = false;
         inventoryFields.forEach(({ key, name }) => {
-            const quantity = profile[`inventory${key}`] || 0;
+            const quantity = data.profile[`inventory${key}`] || 0;
             if (quantity > 0) {
                 hasInventory = true;
-                yPos = addText(`${name}: ${quantity} box${quantity !== 1 ? 'es' : ''}`, margin + 5, yPos);
-                yPos += 7;
+                yPos = addText(`${name}: ${quantity} boxes`, margin + 3, yPos);
+                yPos += 6;
             }
         });
-        
+
         if (!hasInventory) {
-            yPos = addText('No inventory currently on hand', margin + 5, yPos);
-            yPos += 7;
+            yPos = addText('No inventory currently on hand', margin + 3, yPos);
+            yPos += 6;
         }
     }
-    
-    // Save the PDF
-    const fileName = `GSC_Sales_Summary_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    // Save PDF
+    const fileName = `GSC_Sales_Report_${new Date().toISOString().split('T')[0]}.pdf`;
     doc.save(fileName);
+}
+
+// ====================
+// EXCEL EXPORT
+// ====================
+
+function handleExportExcel() {
+    const options = getExportOptions();
+
+    if (!Object.values(options).some(v => v)) {
+        alert('Please select at least one section to export.');
+        return;
+    }
+
+    generateExcel(options);
+    closeExportModal();
+}
+
+function generateExcel(options) {
+    const data = gatherExportData();
+    const wb = XLSX.utils.book_new();
+
+    // Basic Summary Sheet
+    if (options.basicSummary) {
+        const summaryData = [
+            ['Girl Scout Cookie Sales Summary'],
+            ['Generated', new Date().toLocaleDateString()],
+            [],
+            ['Total Boxes Sold', data.totalBoxes],
+            ['Individual Sales', data.individualBoxes],
+            ['Event Manual Sales', data.eventBoxes],
+            ['Event Booth Sales', data.eventBoothBoxes],
+            [],
+            ['Total Revenue', `$${data.totalRevenue.toFixed(2)}`],
+            ['Sales Revenue', `$${(data.salesRevenue + data.eventBoothRevenue).toFixed(2)}`],
+            ['Donations', `$${(data.totalDonationAmount + data.eventDonationsAmount).toFixed(2)}`]
+        ];
+        const ws = XLSX.utils.aoa_to_sheet(summaryData);
+        XLSX.utils.book_append_sheet(wb, ws, 'Summary');
+    }
+
+    // Cookie Breakdown Sheet
+    if (options.cookieBreakdown) {
+        const breakdownData = [
+            ['Cookie Type', 'Individual Sales', 'Event Manual', 'Event Booth', 'Total']
+        ];
+
+        Object.entries(data.cookieBreakdown)
+            .filter(([, counts]) => counts.total > 0)
+            .sort((a, b) => b[1].total - a[1].total)
+            .forEach(([cookieType, counts]) => {
+                breakdownData.push([
+                    cookieType,
+                    counts.individual,
+                    counts.event,
+                    counts.eventBooth,
+                    counts.total
+                ]);
+            });
+
+        const ws = XLSX.utils.aoa_to_sheet(breakdownData);
+        XLSX.utils.book_append_sheet(wb, ws, 'Cookie Breakdown');
+    }
+
+    // Individual Sales Detail Sheet
+    if (options.individualDetails && data.sales.length > 0) {
+        const salesData = [
+            ['Customer Name', 'Address', 'Phone', 'Cookie Type', 'Boxes', 'Total', 'Payment Method', 'Collected', 'Due', 'Status']
+        ];
+
+        data.sales.forEach(sale => {
+            const boxes = convertToBoxes(sale);
+            const total = boxes * PRICE_PER_BOX;
+            const amountDue = sale.amountDue || 0;
+            const paymentStatus = amountDue > 0 ? 'PARTIAL' : 'PAID';
+
+            salesData.push([
+                sale.customerName || 'Anonymous',
+                sale.customerAddress || '',
+                sale.customerPhone || '',
+                sale.cookieType,
+                boxes,
+                `$${total.toFixed(2)}`,
+                sale.paymentMethod || '',
+                `$${(sale.amountCollected || 0).toFixed(2)}`,
+                `$${amountDue.toFixed(2)}`,
+                paymentStatus
+            ]);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(salesData);
+        XLSX.utils.book_append_sheet(wb, ws, 'Individual Sales');
+    }
+
+    // Event Sales Detail Sheet
+    if (options.eventDetails && data.events.length > 0) {
+        const eventData = [
+            ['Event Name', 'Date', 'Description', 'Cookie Type', 'Initial', 'Remaining', 'Sold', 'Revenue', 'Donations']
+        ];
+
+        data.events.forEach(event => {
+            const varieties = ['ThinMints', 'Samoas', 'Tagalongs', 'Trefoils', 'DosiDos', 'LemonUps', 'Adventurefuls', 'Exploremores', 'Toffeetastic'];
+            const varietyNames = ['Thin Mints', 'Samoas', 'Tagalongs', 'Trefoils', 'Do-si-dos', 'Lemon-Ups', 'Adventurefuls', 'Exploremores', 'Toffee-tastic'];
+
+            const totalInitial = (event.initialBoxes || 0) + ((event.initialCases || 0) * BOXES_PER_CASE);
+            const totalRemaining = (event.remainingBoxes || 0) + ((event.remainingCases || 0) * BOXES_PER_CASE);
+            const totalSold = Math.max(0, totalInitial - totalRemaining);
+            const eventRevenue = totalSold * PRICE_PER_BOX;
+
+            varieties.forEach((variety, idx) => {
+                const initial = event[`initial${variety}`] || 0;
+                const remaining = event[`remaining${variety}`] || 0;
+                const sold = Math.max(0, initial - remaining);
+
+                if (sold > 0 || initial > 0) {
+                    eventData.push([
+                        event.eventName,
+                        new Date(event.eventDate).toLocaleString(),
+                        event.description || '',
+                        varietyNames[idx],
+                        initial,
+                        remaining,
+                        sold,
+                        `$${(sold * PRICE_PER_BOX).toFixed(2)}`,
+                        idx === 0 ? `$${(event.donationsReceived || 0).toFixed(2)}` : ''
+                    ]);
+                }
+            });
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(eventData);
+        XLSX.utils.book_append_sheet(wb, ws, 'Event Sales');
+    }
+
+    // Inventory Sheet
+    if (options.inventory && data.profile) {
+        const inventoryData = [
+            ['Cookie Type', 'On-Hand Boxes']
+        ];
+
+        const inventoryFields = [
+            { key: 'ThinMints', name: 'Thin Mints' },
+            { key: 'Samoas', name: 'Samoas' },
+            { key: 'Tagalongs', name: 'Tagalongs' },
+            { key: 'Trefoils', name: 'Trefoils' },
+            { key: 'DosiDos', name: 'Do-si-dos' },
+            { key: 'LemonUps', name: 'Lemon-Ups' },
+            { key: 'Adventurefuls', name: 'Adventurefuls' },
+            { key: 'Exploremores', name: 'Exploremores' },
+            { key: 'Toffeetastic', name: 'Toffee-tastic' }
+        ];
+
+        inventoryFields.forEach(({ key, name }) => {
+            const quantity = data.profile[`inventory${key}`] || 0;
+            inventoryData.push([name, quantity]);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(inventoryData);
+        XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
+    }
+
+    // Save Excel file
+    const fileName = `GSC_Sales_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
 }
 
 // Initialize app
@@ -340,10 +699,20 @@ function setupEventListeners() {
     // Event variety table listeners
     setupVarietyTableListeners();
     
-    // PDF Print button listener
+    // Export button listener - open modal instead of direct export
     const printSummaryBtn = document.getElementById('printSummaryBtn');
     if (printSummaryBtn) {
-        printSummaryBtn.addEventListener('click', generatePDFSummary);
+        printSummaryBtn.addEventListener('click', openExportModal);
+    }
+
+    // Export format button listeners
+    const exportPdfBtn = document.getElementById('exportPdfBtn');
+    const exportExcelBtn = document.getElementById('exportExcelBtn');
+    if (exportPdfBtn) {
+        exportPdfBtn.addEventListener('click', handleExportPDF);
+    }
+    if (exportExcelBtn) {
+        exportExcelBtn.addEventListener('click', handleExportExcel);
     }
 }
 
@@ -2563,3 +2932,11 @@ if (document.readyState === 'loading') {
     setupCookieTableListeners();
     setupDangerZone();
 }
+
+// Close modal when clicking outside
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('exportModal');
+    if (event.target === modal) {
+        closeExportModal();
+    }
+});

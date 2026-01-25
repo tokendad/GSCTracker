@@ -249,7 +249,7 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                         <h2 style="margin: 0;">Sales Summary</h2>
                         <button id="printSummaryBtn" class="btn btn-secondary" style="min-width: auto;">
-                            <span style="margin-right: 4px;">📄</span> Print PDF
+                            <span style="margin-right: 4px;">📊</span> Export Report
                         </button>
                     </div>
                     <div class="summary-card">
@@ -1025,7 +1025,65 @@
         </footer>
     </div>
 
+    <!-- Export Options Modal -->
+    <div id="exportModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Export Sales Report</h2>
+                <button class="modal-close" onclick="closeExportModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Select the sections you want to include in your report:</p>
+
+                <div class="export-options">
+                    <label class="export-option">
+                        <input type="checkbox" id="exportBasicSummary" checked>
+                        <span class="export-option-label">Basic Summary</span>
+                        <span class="export-option-desc">Total boxes sold and revenue</span>
+                    </label>
+
+                    <label class="export-option">
+                        <input type="checkbox" id="exportCookieBreakdown" checked>
+                        <span class="export-option-label">Cookie Breakdown by Type</span>
+                        <span class="export-option-desc">Boxes sold per cookie variety across all sales channels</span>
+                    </label>
+
+                    <label class="export-option">
+                        <input type="checkbox" id="exportIndividualDetails">
+                        <span class="export-option-label">Individual Sales Detail</span>
+                        <span class="export-option-desc">Complete list with customer names, quantities, and payment status</span>
+                    </label>
+
+                    <label class="export-option">
+                        <input type="checkbox" id="exportEventDetails">
+                        <span class="export-option-label">Event Sales Detail</span>
+                        <span class="export-option-desc">Event breakdown by cookie variety with dates and inventory</span>
+                    </label>
+
+                    <label class="export-option">
+                        <input type="checkbox" id="exportInventory">
+                        <span class="export-option-label">Current Inventory</span>
+                        <span class="export-option-desc">On-hand boxes by cookie type</span>
+                    </label>
+                </div>
+
+                <div class="export-format">
+                    <h3>Export Format</h3>
+                    <div class="format-buttons">
+                        <button id="exportPdfBtn" class="btn btn-primary export-format-btn">
+                            <span>📄</span> Export as PDF
+                        </button>
+                        <button id="exportExcelBtn" class="btn btn-secondary export-format-btn">
+                            <span>📊</span> Export as Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="script.js?v=3"></script>
 </body>
 </html>
