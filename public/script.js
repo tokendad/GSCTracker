@@ -296,6 +296,8 @@ function generatePDF(options) {
     yPos += 12;
 
     const data = gatherExportData();
+    const goal = (data.profile && data.profile.goalBoxes) || 0;
+    const remaining = goal - data.totalBoxes;
 
     // Basic Summary
     if (options.basicSummary) {
@@ -310,8 +312,10 @@ function generatePDF(options) {
         yPos += 6;
         yPos = addText(`Individual Sales: ${data.individualBoxes} boxes`, margin + 3, yPos);
         yPos += 6;
-        yPos = addText(`Event Sales: ${data.eventBoxes + data.eventBoothBoxes} boxes (${data.eventBoxes} manual + ${data.eventBoothBoxes} booth)`, margin + 3, yPos);
+        yPos = addText(`Event Manual Sales: ${data.eventBoxes} boxes`, margin + 3, yPos);
         yPos += 6;
+        yPos = addText(`Event Booth Sales: ${data.eventBoothBoxes} boxes`, margin + 3, yPos);
+        yPos += 8;
         doc.setFont(undefined, 'bold');
         yPos = addText(`Total Revenue: $${data.totalRevenue.toFixed(2)}`, margin + 3, yPos, 10, 'bold');
         doc.setFont(undefined, 'normal');
@@ -320,6 +324,14 @@ function generatePDF(options) {
         yPos += 6;
         yPos = addText(`  Donations: $${(data.totalDonationAmount + data.eventDonationsAmount).toFixed(2)}`, margin + 3, yPos);
         yPos += 8;
+        if (goal > 0) {
+            doc.setFont(undefined, 'bold');
+            yPos = addText(`Goal: ${goal} boxes`, margin + 3, yPos, 10, 'bold');
+            yPos += 6;
+            doc.setFont(undefined, 'normal');
+            yPos = addText(`Remaining: ${remaining} boxes`, margin + 3, yPos);
+            yPos += 8;
+        }
         yPos = addLine(yPos);
     }
 
@@ -337,6 +349,11 @@ function generatePDF(options) {
         doc.setFontSize(10);
         doc.setFont(undefined, 'normal');
 
+        let totalIndividual = 0;
+        let totalEventManual = 0;
+        let totalEventBooth = 0;
+        let grandTotal = 0;
+
         sortedCookies.forEach(([cookieType, counts]) => {
             doc.setFont(undefined, 'bold');
             yPos = addText(`${cookieType}: ${counts.total} boxes`, margin + 3, yPos, 10, 'bold');
@@ -344,46 +361,95 @@ function generatePDF(options) {
             doc.setFont(undefined, 'normal');
             yPos = addText(`  Individual: ${counts.individual} | Event Manual: ${counts.event} | Event Booth: ${counts.eventBooth}`, margin + 5, yPos, 9);
             yPos += 7;
+
+            totalIndividual += counts.individual;
+            totalEventManual += counts.event;
+            totalEventBooth += counts.eventBooth;
+            grandTotal += counts.total;
         });
 
+        // Add totals
         yPos += 2;
+        doc.setFont(undefined, 'bold');
+        yPos = addText(`TOTALS: ${grandTotal} boxes`, margin + 3, yPos, 10, 'bold');
+        yPos += 5;
+        doc.setFont(undefined, 'normal');
+        yPos = addText(`  Individual: ${totalIndividual} | Event Manual: ${totalEventManual} | Event Booth: ${totalEventBooth}`, margin + 5, yPos, 9);
+        yPos += 8;
         yPos = addLine(yPos);
     }
 
-    // Individual Sales Detail
+    // Individual Sales Detail - Grouped by Customer
     if (options.individualDetails && data.sales.length > 0) {
         doc.setFontSize(14);
         doc.setFont(undefined, 'bold');
         yPos = addText('Individual Sales Detail', margin, yPos, 14, 'bold');
         yPos += 8;
 
-        doc.setFontSize(9);
+        // Group sales by customer
+        const customerOrders = {};
 
-        data.sales.forEach((sale, idx) => {
+        data.sales.forEach(sale => {
+            const key = `${sale.customerName || 'Anonymous'}_${sale.customerAddress || ''}_${sale.customerPhone || ''}`;
+
+            if (!customerOrders[key]) {
+                customerOrders[key] = {
+                    customerName: sale.customerName || 'Anonymous',
+                    address: sale.customerAddress || '',
+                    phone: sale.customerPhone || '',
+                    paymentMethod: sale.paymentMethod || '',
+                    cookies: {},
+                    totalCollected: 0,
+                    totalDue: 0,
+                    status: 'PAID'
+                };
+            }
+
             const boxes = convertToBoxes(sale);
-            const total = boxes * PRICE_PER_BOX;
-            const amountDue = sale.amountDue || 0;
-            const paymentStatus = amountDue > 0 ? 'PARTIAL' : 'PAID';
+            const cookieName = sale.cookieType;
 
+            customerOrders[key].cookies[cookieName] = (customerOrders[key].cookies[cookieName] || 0) + boxes;
+            customerOrders[key].totalCollected += (sale.amountCollected || 0);
+            customerOrders[key].totalDue += (sale.amountDue || 0);
+
+            if (sale.amountDue > 0) {
+                customerOrders[key].status = 'PARTIAL';
+            }
+        });
+
+        doc.setFontSize(8);
+
+        let orderNum = 1;
+        Object.values(customerOrders).forEach(order => {
             doc.setFont(undefined, 'bold');
-            yPos = addText(`${idx + 1}. ${sale.customerName || 'Anonymous'}`, margin + 3, yPos, 9, 'bold');
+            yPos = addText(`${orderNum}. ${order.customerName}`, margin + 2, yPos, 9, 'bold');
             yPos += 5;
 
             doc.setFont(undefined, 'normal');
-            yPos = addText(`   ${sale.cookieType} - ${boxes} boxes @ $${PRICE_PER_BOX}/box = $${total.toFixed(2)}`, margin + 3, yPos, 9);
-            yPos += 5;
-
-            if (sale.customerAddress) {
-                yPos = addText(`   Address: ${sale.customerAddress}`, margin + 3, yPos, 9);
-                yPos += 5;
+            if (order.address) {
+                yPos = addText(`   ${order.address}`, margin + 2, yPos, 8);
+                yPos += 4;
             }
-            if (sale.customerPhone) {
-                yPos = addText(`   Phone: ${sale.customerPhone}`, margin + 3, yPos, 9);
-                yPos += 5;
+            if (order.phone) {
+                yPos = addText(`   ${order.phone}`, margin + 2, yPos, 8);
+                yPos += 4;
             }
 
-            yPos = addText(`   Payment: ${sale.paymentMethod || 'N/A'} | Collected: $${(sale.amountCollected || 0).toFixed(2)} | Due: $${amountDue.toFixed(2)} | Status: ${paymentStatus}`, margin + 3, yPos, 9);
-            yPos += 7;
+            // List cookies
+            const cookiesList = Object.entries(order.cookies)
+                .map(([type, qty]) => `${type}: ${qty}`)
+                .join(', ');
+
+            yPos = addText(`   Cookies: ${cookiesList}`, margin + 2, yPos, 8);
+            yPos += 4;
+
+            const totalBoxes = Object.values(order.cookies).reduce((sum, qty) => sum + qty, 0);
+            const totalAmount = totalBoxes * PRICE_PER_BOX;
+
+            yPos = addText(`   Total: ${totalBoxes} boxes = $${totalAmount.toFixed(2)} | Collected: $${order.totalCollected.toFixed(2)} | Due: $${order.totalDue.toFixed(2)} | ${order.status}`, margin + 2, yPos, 8);
+            yPos += 6;
+
+            orderNum++;
         });
 
         yPos += 2;
@@ -399,11 +465,21 @@ function generatePDF(options) {
 
         doc.setFontSize(9);
 
+        let totalEventInitial = 0;
+        let totalEventRemaining = 0;
+        let totalEventSold = 0;
+        let totalEventRevenue = 0;
+
         data.events.forEach(event => {
             const totalInitial = (event.initialBoxes || 0) + ((event.initialCases || 0) * BOXES_PER_CASE);
             const totalRemaining = (event.remainingBoxes || 0) + ((event.remainingCases || 0) * BOXES_PER_CASE);
             const totalSold = Math.max(0, totalInitial - totalRemaining);
-            const eventRevenue = totalSold * PRICE_PER_BOX + (event.donationsReceived || 0);
+            const eventRevenue = totalSold * PRICE_PER_BOX;
+
+            totalEventInitial += totalInitial;
+            totalEventRemaining += totalRemaining;
+            totalEventSold += totalSold;
+            totalEventRevenue += eventRevenue;
 
             doc.setFont(undefined, 'bold');
             yPos = addText(`${event.eventName}`, margin + 3, yPos, 10, 'bold');
@@ -447,6 +523,12 @@ function generatePDF(options) {
             yPos += 3;
         });
 
+        // Add totals
+        yPos += 2;
+        doc.setFont(undefined, 'bold');
+        yPos = addText(`TOTALS: Initial: ${totalEventInitial} | Remaining: ${totalEventRemaining} | Sold: ${totalEventSold} | Revenue: $${totalEventRevenue.toFixed(2)}`, margin + 3, yPos, 9, 'bold');
+        yPos += 8;
+
         yPos = addLine(yPos);
     }
 
@@ -472,9 +554,12 @@ function generatePDF(options) {
         doc.setFontSize(10);
         doc.setFont(undefined, 'normal');
 
+        let totalInventory = 0;
         let hasInventory = false;
+
         inventoryFields.forEach(({ key, name }) => {
             const quantity = data.profile[`inventory${key}`] || 0;
+            totalInventory += quantity;
             if (quantity > 0) {
                 hasInventory = true;
                 yPos = addText(`${name}: ${quantity} boxes`, margin + 3, yPos);
@@ -484,6 +569,11 @@ function generatePDF(options) {
 
         if (!hasInventory) {
             yPos = addText('No inventory currently on hand', margin + 3, yPos);
+            yPos += 6;
+        } else {
+            yPos += 2;
+            doc.setFont(undefined, 'bold');
+            yPos = addText(`Total Inventory: ${totalInventory} boxes`, margin + 3, yPos, 10, 'bold');
             yPos += 6;
         }
     }
@@ -513,10 +603,13 @@ function generateExcel(options) {
     const data = gatherExportData();
     const wb = XLSX.utils.book_new();
 
+    // Get goal from profile
+    const goal = (data.profile && data.profile.goalBoxes) || 0;
+
     // Basic Summary Sheet
     if (options.basicSummary) {
         const summaryData = [
-            ['Girl Scout Cookie Sales Summary'],
+            ['Girl Scout Cookie Sales Summary', ''],
             ['Generated', new Date().toLocaleDateString()],
             [],
             ['Total Boxes Sold', data.totalBoxes],
@@ -524,11 +617,19 @@ function generateExcel(options) {
             ['Event Manual Sales', data.eventBoxes],
             ['Event Booth Sales', data.eventBoothBoxes],
             [],
-            ['Total Revenue', `$${data.totalRevenue.toFixed(2)}`],
-            ['Sales Revenue', `$${(data.salesRevenue + data.eventBoothRevenue).toFixed(2)}`],
-            ['Donations', `$${(data.totalDonationAmount + data.eventDonationsAmount).toFixed(2)}`]
+            ['Total Revenue', data.totalRevenue.toFixed(2)],
+            ['Sales Revenue', (data.salesRevenue + data.eventBoothRevenue).toFixed(2)],
+            ['Donations', (data.totalDonationAmount + data.eventDonationsAmount).toFixed(2)],
+            [],
+            ['Goal ', goal],
+            ['Remaining', { f: `B13-B4` }] // Formula: Goal - Total Boxes Sold
         ];
         const ws = XLSX.utils.aoa_to_sheet(summaryData);
+
+        // Format currency cells        ws['B9'] = { t: 'n', v: data.totalRevenue, z: '"$"#,##0.00' };
+        ws['B10'] = { t: 'n', v: data.salesRevenue + data.eventBoothRevenue, z: '"$"#,##0.00' };
+        ws['B11'] = { t: 'n', v: data.totalDonationAmount + data.eventDonationsAmount, z: '"$"#,##0.00' };
+
         XLSX.utils.book_append_sheet(wb, ws, 'Summary');
     }
 
@@ -538,50 +639,121 @@ function generateExcel(options) {
             ['Cookie Type', 'Individual Sales', 'Event Manual', 'Event Booth', 'Total']
         ];
 
-        Object.entries(data.cookieBreakdown)
+        const sortedCookies = Object.entries(data.cookieBreakdown)
             .filter(([, counts]) => counts.total > 0)
-            .sort((a, b) => b[1].total - a[1].total)
-            .forEach(([cookieType, counts]) => {
-                breakdownData.push([
-                    cookieType,
-                    counts.individual,
-                    counts.event,
-                    counts.eventBooth,
-                    counts.total
-                ]);
-            });
+            .sort((a, b) => b[1].total - a[1].total);
+
+        sortedCookies.forEach(([cookieType, counts]) => {
+            breakdownData.push([
+                cookieType,
+                counts.individual,
+                counts.event,
+                counts.eventBooth,
+                counts.total
+            ]);
+        });
+
+        // Add totals row with formulas
+        const dataRowCount = sortedCookies.length;
+        breakdownData.push([
+            'Totals',
+            { f: `SUM(B2:B${dataRowCount + 1})` },
+            { f: `SUM(C2:C${dataRowCount + 1})` },
+            { f: `SUM(D2:D${dataRowCount + 1})` },
+            { f: `SUM(E2:E${dataRowCount + 1})` }
+        ]);
 
         const ws = XLSX.utils.aoa_to_sheet(breakdownData);
         XLSX.utils.book_append_sheet(wb, ws, 'Cookie Breakdown');
     }
 
-    // Individual Sales Detail Sheet
+    // Individual Sales Detail Sheet - NEW TRANSPOSED FORMAT
     if (options.individualDetails && data.sales.length > 0) {
-        const salesData = [
-            ['Customer Name', 'Address', 'Phone', 'Cookie Type', 'Boxes', 'Total', 'Payment Method', 'Collected', 'Due', 'Status']
-        ];
+        // Group sales by customer
+        const customerOrders = {};
 
         data.sales.forEach(sale => {
-            const boxes = convertToBoxes(sale);
-            const total = boxes * PRICE_PER_BOX;
-            const amountDue = sale.amountDue || 0;
-            const paymentStatus = amountDue > 0 ? 'PARTIAL' : 'PAID';
+            const key = `${sale.customerName || 'Anonymous'}_${sale.customerAddress || ''}_${sale.customerPhone || ''}`;
 
-            salesData.push([
-                sale.customerName || 'Anonymous',
-                sale.customerAddress || '',
-                sale.customerPhone || '',
-                sale.cookieType,
-                boxes,
-                `$${total.toFixed(2)}`,
-                sale.paymentMethod || '',
-                `$${(sale.amountCollected || 0).toFixed(2)}`,
-                `$${amountDue.toFixed(2)}`,
-                paymentStatus
-            ]);
+            if (!customerOrders[key]) {
+                customerOrders[key] = {
+                    customerName: sale.customerName || 'Anonymous',
+                    address: sale.customerAddress || '',
+                    phone: sale.customerPhone || '',
+                    paymentMethod: sale.paymentMethod || '',
+                    cookies: {},
+                    totalCollected: 0,
+                    totalDue: 0,
+                    status: 'PAID'
+                };
+            }
+
+            const boxes = convertToBoxes(sale);
+            const cookieName = sale.cookieType;
+
+            customerOrders[key].cookies[cookieName] = (customerOrders[key].cookies[cookieName] || 0) + boxes;
+            customerOrders[key].totalCollected += (sale.amountCollected || 0);
+            customerOrders[key].totalDue += (sale.amountDue || 0);
+
+            if (sale.amountDue > 0) {
+                customerOrders[key].status = 'PARTIAL';
+            }
+        });
+
+        // Create header row with all cookie types
+        const cookieTypes = ['Thin Mints', 'Samoas', 'Tagalongs', 'Trefoils', 'Do-si-dos',
+                            'Lemon-Ups', 'Adventurefuls', 'Exploremores', 'Toffee-tastic', 'Donated Cookies'];
+
+        const salesData = [
+            ['Customer Name', 'Address', 'Phone', ...cookieTypes, 'Total Boxes', 'Total Amount', 'Collected', 'Due', 'Payment Method', 'Status']
+        ];
+
+        // Add each customer order as a row
+        Object.values(customerOrders).forEach(order => {
+            const row = [
+                order.customerName,
+                order.address,
+                order.phone
+            ];
+
+            let totalBoxes = 0;
+            cookieTypes.forEach(cookieType => {
+                const boxes = order.cookies[cookieType] || 0;
+                row.push(boxes || '');
+                totalBoxes += boxes;
+            });
+
+            const totalAmount = totalBoxes * PRICE_PER_BOX;
+
+            row.push(
+                totalBoxes,
+                totalAmount,
+                order.totalCollected,
+                order.totalDue,
+                order.paymentMethod,
+                order.status
+            );
+
+            salesData.push(row);
         });
 
         const ws = XLSX.utils.aoa_to_sheet(salesData);
+
+        // Format currency columns (Total Amount, Collected, Due)
+        const totalAmountCol = 13; // Column M (0-indexed: 12, but Excel format needs 13)
+        const collectedCol = 14; // Column N
+        const dueCol = 15; // Column O
+
+        for (let i = 2; i <= salesData.length; i++) {
+            const colLetterAmount = XLSX.utils.encode_col(totalAmountCol);
+            const colLetterCollected = XLSX.utils.encode_col(collectedCol);
+            const colLetterDue = XLSX.utils.encode_col(dueCol);
+
+            if (ws[`${colLetterAmount}${i}`]) ws[`${colLetterAmount}${i}`].z = '"$"#,##0.00';
+            if (ws[`${colLetterCollected}${i}`]) ws[`${colLetterCollected}${i}`].z = '"$"#,##0.00';
+            if (ws[`${colLetterDue}${i}`]) ws[`${colLetterDue}${i}`].z = '"$"#,##0.00';
+        }
+
         XLSX.utils.book_append_sheet(wb, ws, 'Individual Sales');
     }
 
@@ -591,21 +763,18 @@ function generateExcel(options) {
             ['Event Name', 'Date', 'Description', 'Cookie Type', 'Initial', 'Remaining', 'Sold', 'Revenue', 'Donations']
         ];
 
+        const varieties = ['ThinMints', 'Samoas', 'Tagalongs', 'Trefoils', 'DosiDos', 'LemonUps', 'Adventurefuls', 'Exploremores', 'Toffeetastic'];
+        const varietyNames = ['Thin Mints', 'Samoas', 'Tagalongs', 'Trefoils', 'Do-si-dos', 'Lemon-Ups', 'Adventurefuls', 'Exploremores', 'Toffee-tastic'];
+
+        let rowCount = 1;
         data.events.forEach(event => {
-            const varieties = ['ThinMints', 'Samoas', 'Tagalongs', 'Trefoils', 'DosiDos', 'LemonUps', 'Adventurefuls', 'Exploremores', 'Toffeetastic'];
-            const varietyNames = ['Thin Mints', 'Samoas', 'Tagalongs', 'Trefoils', 'Do-si-dos', 'Lemon-Ups', 'Adventurefuls', 'Exploremores', 'Toffee-tastic'];
-
-            const totalInitial = (event.initialBoxes || 0) + ((event.initialCases || 0) * BOXES_PER_CASE);
-            const totalRemaining = (event.remainingBoxes || 0) + ((event.remainingCases || 0) * BOXES_PER_CASE);
-            const totalSold = Math.max(0, totalInitial - totalRemaining);
-            const eventRevenue = totalSold * PRICE_PER_BOX;
-
             varieties.forEach((variety, idx) => {
                 const initial = event[`initial${variety}`] || 0;
                 const remaining = event[`remaining${variety}`] || 0;
                 const sold = Math.max(0, initial - remaining);
 
                 if (sold > 0 || initial > 0) {
+                    rowCount++;
                     eventData.push([
                         event.eventName,
                         new Date(event.eventDate).toLocaleString(),
@@ -614,14 +783,35 @@ function generateExcel(options) {
                         initial,
                         remaining,
                         sold,
-                        `$${(sold * PRICE_PER_BOX).toFixed(2)}`,
-                        idx === 0 ? `$${(event.donationsReceived || 0).toFixed(2)}` : ''
+                        sold * PRICE_PER_BOX,
+                        idx === 0 ? (event.donationsReceived || 0) : ''
                     ]);
                 }
             });
         });
 
+        // Add totals row with formulas
+        eventData.push([
+            '',
+            '',
+            '',
+            'Totals',
+            { f: `SUM(E2:E${rowCount})` },
+            { f: `SUM(F2:F${rowCount})` },
+            { f: `SUM(G2:G${rowCount})` },
+            { f: `SUM(H2:H${rowCount})` },
+            ''
+        ]);
+
         const ws = XLSX.utils.aoa_to_sheet(eventData);
+
+        // Format revenue column as currency
+        for (let i = 2; i <= rowCount; i++) {
+            if (ws[`H${i}`]) ws[`H${i}`].z = '"$"#,##0.00';
+            if (ws[`I${i}`]) ws[`I${i}`].z = '"$"#,##0.00';
+        }
+        if (ws[`H${rowCount + 1}`]) ws[`H${rowCount + 1}`].z = '"$"#,##0.00';
+
         XLSX.utils.book_append_sheet(wb, ws, 'Event Sales');
     }
 
@@ -647,6 +837,12 @@ function generateExcel(options) {
             const quantity = data.profile[`inventory${key}`] || 0;
             inventoryData.push([name, quantity]);
         });
+
+        // Add total row with formula
+        inventoryData.push([
+            'Total ',
+            { f: 'SUM(B2:B10)' }
+        ]);
 
         const ws = XLSX.utils.aoa_to_sheet(inventoryData);
         XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
