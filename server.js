@@ -168,12 +168,29 @@ try {
         'remainingThinMints', 'remainingSamoas', 'remainingTagalongs', 'remainingTrefoils',
         'remainingDosiDos', 'remainingLemonUps', 'remainingAdventurefuls', 'remainingExploremores', 'remainingToffeetastic'
     ];
-    
+
     for (const column of varietyColumns) {
         const hasColumn = eventsTableInfo.some(col => col.name === column);
         if (!hasColumn) {
             db.exec(`ALTER TABLE events ADD COLUMN ${column} INTEGER DEFAULT 0`);
             logger.info(`Migration: Added ${column} column to events table`);
+        }
+    }
+
+    // Migration: Add order status tracking columns to sales table
+    const orderStatusColumns = [
+        { name: 'orderSource', type: 'TEXT', default: "'Manual'" },
+        { name: 'paymentStatus', type: 'TEXT', default: "'Not Paid'" },
+        { name: 'deliveryStatus', type: 'TEXT', default: "'Not Delivered'" }
+    ];
+
+    const salesTableInfo = db.prepare("PRAGMA table_info(sales)").all();
+    for (const column of orderStatusColumns) {
+        const hasColumn = salesTableInfo.some(col => col.name === column.name);
+        if (!hasColumn) {
+            const defaultClause = column.default ? ` DEFAULT ${column.default}` : '';
+            db.exec(`ALTER TABLE sales ADD COLUMN ${column.name} ${column.type}${defaultClause}`);
+            logger.info(`Migration: Added ${column.name} column to sales table`);
         }
     }
 
@@ -270,25 +287,39 @@ app.post('/api/sales', (req, res) => {
         const validAmountCollected = (typeof amountCollected === 'number' && amountCollected >= 0) ? amountCollected : 0;
         const validAmountDue = (typeof amountDue === 'number' && amountDue >= 0) ? amountDue : 0;
         const validPaymentMethod = paymentMethod || null;
-        
+
         // New order grouping fields
         const sanitizedOrderNumber = (req.body.orderNumber && String(req.body.orderNumber)) || null;
         const sanitizedOrderType = (req.body.orderType && String(req.body.orderType)) || null;
         const sanitizedOrderStatus = (req.body.orderStatus && String(req.body.orderStatus)) || 'Pending';
 
+        // Order status tracking fields
+        const validOrderSource = (req.body.orderSource === 'Online') ? 'Online' : 'Manual';
+        const validPaymentStatus = (req.body.paymentStatus === 'Paid') ? 'Paid' : 'Not Paid';
+        // Set default delivery status based on order source
+        let validDeliveryStatus = req.body.deliveryStatus || (validOrderSource === 'Online' ? 'Not Shipped' : 'Not Delivered');
+        // Validate delivery status based on order source
+        if (validOrderSource === 'Online') {
+            validDeliveryStatus = ['Not Shipped', 'Shipped'].includes(validDeliveryStatus) ? validDeliveryStatus : 'Not Shipped';
+        } else {
+            validDeliveryStatus = ['Not Delivered', 'Delivered'].includes(validDeliveryStatus) ? validDeliveryStatus : 'Not Delivered';
+        }
+
         const stmt = db.prepare(`
             INSERT INTO sales (
                 cookieType, quantity, customerName, date, saleType,
-                customerAddress, customerPhone, unitType, 
+                customerAddress, customerPhone, unitType,
                 amountCollected, amountDue, paymentMethod,
-                orderNumber, orderType, orderStatus
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                orderNumber, orderType, orderStatus,
+                orderSource, paymentStatus, deliveryStatus
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         const result = stmt.run(
             cookieType, quantity, sanitizedCustomerName, saleDate, validSaleType,
             sanitizedCustomerAddress, sanitizedCustomerPhone, validUnitType,
             validAmountCollected, validAmountDue, validPaymentMethod,
-            sanitizedOrderNumber, sanitizedOrderType, sanitizedOrderStatus
+            sanitizedOrderNumber, sanitizedOrderType, sanitizedOrderStatus,
+            validOrderSource, validPaymentStatus, validDeliveryStatus
         );
         
         const newSale = db.prepare('SELECT * FROM sales WHERE id = ?').get(result.lastInsertRowid);
@@ -305,7 +336,7 @@ app.post('/api/sales', (req, res) => {
 app.put('/api/sales/:id', (req, res) => {
     try {
         const { id } = req.params;
-        const { orderStatus, amountCollected, amountDue } = req.body;
+        const { orderStatus, amountCollected, amountDue, paymentStatus, deliveryStatus } = req.body;
 
         // Dynamic update query construction
         const updates = [];
@@ -324,6 +355,28 @@ app.put('/api/sales/:id', (req, res) => {
         if (amountDue !== undefined) {
             updates.push('amountDue = ?');
             values.push(amountDue);
+        }
+
+        if (paymentStatus !== undefined) {
+            const validPaymentStatus = (paymentStatus === 'Paid') ? 'Paid' : 'Not Paid';
+            updates.push('paymentStatus = ?');
+            values.push(validPaymentStatus);
+        }
+
+        if (deliveryStatus !== undefined) {
+            // Get current sale to check orderSource
+            const currentSale = db.prepare('SELECT orderSource FROM sales WHERE id = ?').get(id);
+            if (currentSale) {
+                const isOnline = currentSale.orderSource === 'Online';
+                let validDeliveryStatus;
+                if (isOnline) {
+                    validDeliveryStatus = ['Not Shipped', 'Shipped'].includes(deliveryStatus) ? deliveryStatus : 'Not Shipped';
+                } else {
+                    validDeliveryStatus = ['Not Delivered', 'Delivered'].includes(deliveryStatus) ? deliveryStatus : 'Not Delivered';
+                }
+                updates.push('deliveryStatus = ?');
+                values.push(validDeliveryStatus);
+            }
         }
 
         if (updates.length === 0) {

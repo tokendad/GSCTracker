@@ -530,6 +530,34 @@
                             </div>
                         </div>
 
+                        <!-- Order Status -->
+                        <div class="form-section">
+                            <h3>Order Status</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="orderSource">Order Source</label>
+                                    <select id="orderSource" onchange="updateDeliveryStatusOptions()">
+                                        <option value="Manual">Manual</option>
+                                        <option value="Online">Online</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="paymentStatus">Payment Status</label>
+                                    <select id="paymentStatus">
+                                        <option value="Not Paid">Not Paid</option>
+                                        <option value="Paid">Paid</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="deliveryStatus">Delivery Status</label>
+                                    <select id="deliveryStatus">
+                                        <option value="Not Delivered">Not Delivered</option>
+                                        <option value="Delivered">Delivered</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
                         <input type="hidden" id="saleType" value="individual">
                         <button type="submit" class="btn btn-primary btn-large">Add Sale</button>
                     </form>

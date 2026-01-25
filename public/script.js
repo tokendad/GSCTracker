@@ -17,6 +17,14 @@ function convertToBoxes(sale) {
     return sale.unitType === 'case' ? sale.quantity * BOXES_PER_CASE : sale.quantity;
 }
 
+// Helper function to check if an order is complete (counts toward totals)
+function isOrderComplete(sale) {
+    // Order is complete if it's Paid AND (Delivered OR Shipped)
+    const isPaid = sale.paymentStatus === 'Paid';
+    const isDelivered = (sale.deliveryStatus === 'Delivered' || sale.deliveryStatus === 'Shipped');
+    return isPaid && isDelivered;
+}
+
 // Data arrays
 let sales = [];
 let donations = [];
@@ -128,8 +136,12 @@ function getExportOptions() {
 // ====================
 
 function gatherExportData() {
-    // Calculate sales totals
-    const salesBoxes = sales.reduce((sum, sale) => sum + convertToBoxes(sale), 0);
+    // Filter for only completed orders (Paid + Delivered/Shipped)
+    const completedSales = sales.filter(sale => isOrderComplete(sale));
+    const pendingSales = sales.filter(sale => !isOrderComplete(sale));
+
+    // Calculate sales totals - ONLY COMPLETED
+    const salesBoxes = completedSales.reduce((sum, sale) => sum + convertToBoxes(sale), 0);
     const donationBoxes = donations.reduce((sum, donation) => sum + (donation.boxCount || 0), 0);
     const eventBoothBoxes = events.reduce((sum, event) => {
         const totalInitial = (event.initialBoxes || 0) + ((event.initialCases || 0) * BOXES_PER_CASE);
@@ -138,8 +150,8 @@ function gatherExportData() {
     }, 0);
     const totalBoxes = salesBoxes + donationBoxes + eventBoothBoxes;
 
-    const individualBoxes = sales.filter(s => s.saleType === 'individual').reduce((sum, sale) => sum + convertToBoxes(sale), 0);
-    const eventBoxes = sales.filter(s => s.saleType === 'event').reduce((sum, sale) => sum + convertToBoxes(sale), 0);
+    const individualBoxes = completedSales.filter(s => s.saleType === 'individual').reduce((sum, sale) => sum + convertToBoxes(sale), 0);
+    const eventBoxes = completedSales.filter(s => s.saleType === 'event').reduce((sum, sale) => sum + convertToBoxes(sale), 0);
 
     const salesRevenue = salesBoxes * PRICE_PER_BOX;
     const eventBoothRevenue = eventBoothBoxes * PRICE_PER_BOX;
@@ -147,7 +159,7 @@ function gatherExportData() {
     const eventDonationsAmount = events.reduce((sum, event) => sum + (event.donationsReceived || 0), 0);
     const totalRevenue = salesRevenue + eventBoothRevenue + totalDonationAmount + eventDonationsAmount;
 
-    // Calculate breakdown by cookie type across all sales channels
+    // Calculate breakdown by cookie type across all sales channels - ONLY COMPLETED
     const cookieBreakdown = {};
     const cookieTypes = ['Thin Mints', 'Samoas', 'Tagalongs', 'Trefoils', 'Do-si-dos', 'Lemon-Ups', 'Adventurefuls', 'Exploremores', 'Toffee-tastic'];
 
@@ -160,8 +172,8 @@ function gatherExportData() {
         };
     });
 
-    // Individual and manual event sales
-    sales.forEach(sale => {
+    // Individual and manual event sales - ONLY COMPLETED
+    completedSales.forEach(sale => {
         const boxes = convertToBoxes(sale);
         const type = sale.cookieType;
         if (!cookieBreakdown[type]) {
@@ -205,7 +217,9 @@ function gatherExportData() {
         totalDonationAmount,
         eventDonationsAmount,
         cookieBreakdown,
-        sales,
+        sales: completedSales,  // Only export completed sales
+        allSales: sales,  // Keep all sales for reference
+        pendingSales,  // Export pending sales separately
         events,
         profile
     };
@@ -1484,8 +1498,11 @@ function updateGoalDisplay() {
     const goalBoxes = profile.goalBoxes || 0;
     const goalAmount = profile.goalAmount || 0;
 
-    // Calculate total boxes (sales + donations + event booth boxes)
-    const salesBoxes = sales.reduce((sum, sale) => sum + convertToBoxes(sale), 0);
+    // Filter for only completed orders
+    const completedSales = sales.filter(sale => isOrderComplete(sale));
+
+    // Calculate total boxes (completed sales + donations + event booth boxes)
+    const salesBoxes = completedSales.reduce((sum, sale) => sum + convertToBoxes(sale), 0);
     const donationBoxes = donations.reduce((sum, donation) => sum + (donation.boxCount || 0), 0);
 
     // Calculate boxes sold from booth events (initial - remaining)
@@ -1522,6 +1539,11 @@ async function handleAddSale(e) {
     const amountDue = parseFloat(amountDueInput.value) || 0;
     const paymentMethod = paymentMethodInput.value;
 
+    // Get order status fields
+    const orderSource = document.getElementById('orderSource').value;
+    const paymentStatus = document.getElementById('paymentStatus').value;
+    const deliveryStatus = document.getElementById('deliveryStatus').value;
+
     // Collect all cookie quantities from the table
     const qtyInputs = document.querySelectorAll('.qty-input');
     const cookieEntries = [];
@@ -1543,7 +1565,8 @@ async function handleAddSale(e) {
     }
 
     // Generate a unique order number for this batch
-    const orderNumber = `MAN-${Date.now()}`;
+    const orderNumberPrefix = orderSource === 'Online' ? 'ONL' : 'MAN';
+    const orderNumber = `${orderNumberPrefix}-${Date.now()}`;
     const saleDate = new Date().toISOString();
 
     try {
@@ -1562,6 +1585,9 @@ async function handleAddSale(e) {
                 paymentMethod,
                 orderNumber,
                 orderType: 'Manual',
+                orderSource,
+                paymentStatus,
+                deliveryStatus,
                 date: saleDate
             };
             return sale;
@@ -2772,51 +2798,57 @@ function renderDonations() {
 
 // Update summary statistics
 function updateSummary() {
-    // Calculate sales boxes (converting cases to boxes where needed)
-    const salesBoxes = sales.reduce((sum, sale) => sum + convertToBoxes(sale), 0);
-    
-    // Calculate donation boxes (Cookie Share)
+    // Filter for only completed orders (Paid + Delivered/Shipped)
+    const completedSales = sales.filter(sale => isOrderComplete(sale));
+
+    // Calculate sales boxes (converting cases to boxes where needed) - ONLY COMPLETED
+    const salesBoxes = completedSales.reduce((sum, sale) => sum + convertToBoxes(sale), 0);
+
+    // Calculate donation boxes (Cookie Share) - donations always count
     const donationBoxes = donations.reduce((sum, donation) => sum + (donation.boxCount || 0), 0);
-    
-    // Calculate boxes sold from booth events (initial - remaining)
+
+    // Calculate boxes sold from booth events (initial - remaining) - events always count
     const eventBoothBoxes = events.reduce((sum, event) => {
         const totalInitial = (event.initialBoxes || 0) + ((event.initialCases || 0) * BOXES_PER_CASE);
         const totalRemaining = (event.remainingBoxes || 0) + ((event.remainingCases || 0) * BOXES_PER_CASE);
         const totalSold = Math.max(0, totalInitial - totalRemaining);
         return sum + totalSold;
     }, 0);
-    
+
     const totalBoxes = salesBoxes + donationBoxes + eventBoothBoxes;
-    
-    const individualBoxes = sales.filter(s => s.saleType === 'individual').reduce((sum, sale) => sum + convertToBoxes(sale), 0);
-    const eventBoxes = sales.filter(s => s.saleType === 'event').reduce((sum, sale) => sum + convertToBoxes(sale), 0);
-    
+
+    const individualBoxes = completedSales.filter(s => s.saleType === 'individual').reduce((sum, sale) => sum + convertToBoxes(sale), 0);
+    const eventBoxes = completedSales.filter(s => s.saleType === 'event').reduce((sum, sale) => sum + convertToBoxes(sale), 0);
+
     const salesRevenue = salesBoxes * PRICE_PER_BOX;
     const eventBoothRevenue = eventBoothBoxes * PRICE_PER_BOX;
     const totalDonationAmount = donations.reduce((sum, donation) => sum + donation.amount, 0);
     const eventDonationsAmount = events.reduce((sum, event) => sum + (event.donationsReceived || 0), 0);
-    
+
     const totalRevenue = salesRevenue + eventBoothRevenue + totalDonationAmount + eventDonationsAmount;
-    
+
     totalBoxesElement.textContent = totalBoxes;
     // Update labels to be more clear if needed, or just keep as is
     individualSalesElement.textContent = `${individualBoxes} boxes`;
     eventSalesElement.textContent = `${eventBoxes + eventBoothBoxes} boxes`;
-    
+
     totalRevenueElement.textContent = `$${totalRevenue.toFixed(2)}`;
     totalDonationsElement.textContent = `$${(totalDonationAmount + eventDonationsAmount).toFixed(2)}`;
 }
 
 // Update cookie breakdown
 function updateBreakdown() {
-    if (sales.length === 0) {
-        cookieBreakdownElement.innerHTML = '<p class="empty-message">No data to display yet.</p>';
+    // Filter for only completed orders
+    const completedSales = sales.filter(sale => isOrderComplete(sale));
+
+    if (completedSales.length === 0) {
+        cookieBreakdownElement.innerHTML = '<p class="empty-message">No completed orders yet.</p>';
         return;
     }
-    
-    // Calculate totals by cookie type (converting cases to boxes)
+
+    // Calculate totals by cookie type (converting cases to boxes) - ONLY COMPLETED
     const breakdown = {};
-    sales.forEach(sale => {
+    completedSales.forEach(sale => {
         const boxes = convertToBoxes(sale);
         if (breakdown[sale.cookieType]) {
             breakdown[sale.cookieType] += boxes;
@@ -2824,11 +2856,11 @@ function updateBreakdown() {
             breakdown[sale.cookieType] = boxes;
         }
     });
-    
+
     // Sort by quantity (descending)
     const sortedBreakdown = Object.entries(breakdown)
         .sort((a, b) => b[1] - a[1]);
-    
+
     cookieBreakdownElement.innerHTML = sortedBreakdown.map(([cookieType, quantity]) => `
         <div class="breakdown-item">
             <span class="breakdown-cookie">${cookieType}</span>
@@ -3147,3 +3179,24 @@ window.addEventListener('click', function(event) {
         closeExportModal();
     }
 });
+
+// Update delivery status options based on order source
+function updateDeliveryStatusOptions() {
+    const orderSource = document.getElementById('orderSource').value;
+    const deliveryStatusSelect = document.getElementById('deliveryStatus');
+
+    // Clear existing options
+    deliveryStatusSelect.innerHTML = '';
+
+    if (orderSource === 'Online') {
+        deliveryStatusSelect.innerHTML = `
+            <option value="Not Shipped">Not Shipped</option>
+            <option value="Shipped">Shipped</option>
+        `;
+    } else {
+        deliveryStatusSelect.innerHTML = `
+            <option value="Not Delivered">Not Delivered</option>
+            <option value="Delivered">Delivered</option>
+        `;
+    }
+}
