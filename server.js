@@ -6,7 +6,13 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const ExcelJS = require('exceljs');
+const session = require('express-session');
+const SQLiteStore = require('connect-sqlite3')(session);
+const passport = require('passport');
+const cookieParser = require('cookie-parser');
 const logger = require('./logger');
+const auth = require('./auth');
+const { configurePassport } = require('./passport-config');
 
 
 // Configure multer for file uploads (memory storage)
@@ -196,11 +202,303 @@ app.use((req, res, next) => {
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser());
+
+// Session configuration
+app.use(session({
+    store: new SQLiteStore({
+        db: 'sessions.db',
+        dir: DATA_DIR
+    }),
+    secret: process.env.SESSION_SECRET || 'gsctracker-secret-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production', // Require HTTPS in production
+        httpOnly: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        sameSite: 'lax'
+    }
+}));
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
+configurePassport(db);
+
+// Clean up expired sessions daily
+setInterval(() => {
+    auth.cleanupExpiredSessions(db);
+}, 24 * 60 * 60 * 1000);
+
 app.use('/api/', limiter); // Apply rate limiting to all API routes
 app.use(express.static('public'));
 
+// ============================================================================
+// Authentication Routes
+// ============================================================================
+
+// Register new user
+app.post('/api/auth/register', async (req, res) => {
+    try {
+        const { email, password, firstName, lastName, dateOfBirth, parentEmail } = req.body;
+
+        // Validate required fields
+        if (!email || !password || !firstName || !lastName) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        // Validate email format
+        if (!auth.isValidEmail(email)) {
+            return res.status(400).json({ error: 'Invalid email format' });
+        }
+
+        // Validate password strength
+        const passwordValidation = auth.validatePassword(password);
+        if (!passwordValidation.valid) {
+            return res.status(400).json({ error: passwordValidation.message });
+        }
+
+        // Check if user already exists
+        const existingUser = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+        if (existingUser) {
+            return res.status(409).json({ error: 'Email already registered' });
+        }
+
+        // Check if minor (COPPA compliance)
+        let isMinorUser = false;
+        if (dateOfBirth) {
+            isMinorUser = auth.isMinor(dateOfBirth);
+
+            // If minor and no parent email, require it
+            if (isMinorUser && !parentEmail) {
+                return res.status(400).json({
+                    error: 'Parent email required for users under 13'
+                });
+            }
+        }
+
+        // Hash password
+        const passwordHash = await auth.hashPassword(password);
+
+        // Create user
+        const insertUser = db.prepare(`
+            INSERT INTO users (
+                email, password_hash, firstName, lastName,
+                dateOfBirth, isMinor, parentEmail, role,
+                isActive, emailVerified, createdAt
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        `);
+
+        const result = insertUser.run(
+            email,
+            passwordHash,
+            firstName,
+            lastName,
+            dateOfBirth || null,
+            isMinorUser ? 1 : 0,
+            parentEmail || null,
+            'scout', // Default role
+            isMinorUser ? 0 : 1, // Require activation for minors
+            0 // Email not verified
+        );
+
+        const userId = result.lastInsertRowid;
+
+        // Create default profile
+        db.prepare(`
+            INSERT INTO profile (userId, scoutName, email)
+            VALUES (?, ?, ?)
+        `).run(userId, `${firstName} ${lastName}`.trim(), email);
+
+        // Log audit event
+        auth.logAuditEvent(db, userId, 'user_registered', req, { email });
+
+        // Send notification if minor (parent consent required)
+        if (isMinorUser) {
+            auth.createNotification(
+                db,
+                userId,
+                'info',
+                'Account Pending',
+                'Your account requires parental consent before activation. A consent email has been sent to your parent/guardian.'
+            );
+        }
+
+        logger.info('New user registered', { userId, email, isMinor: isMinorUser });
+
+        res.status(201).json({
+            message: isMinorUser
+                ? 'Registration successful. Parental consent required.'
+                : 'Registration successful. Please log in.',
+            userId,
+            requiresConsent: isMinorUser
+        });
+
+    } catch (error) {
+        logger.error('Registration error', { error: error.message, stack: error.stack });
+        res.status(500).json({ error: 'Registration failed' });
+    }
+});
+
+// Login with email/password
+app.post('/api/auth/login', (req, res, next) => {
+    passport.authenticate('local', (err, user, info) => {
+        if (err) {
+            logger.error('Login error', { error: err.message });
+            return res.status(500).json({ error: 'Login failed' });
+        }
+
+        if (!user) {
+            return res.status(401).json({ error: info.message || 'Invalid credentials' });
+        }
+
+        req.logIn(user, (err) => {
+            if (err) {
+                logger.error('Session creation error', { error: err.message });
+                return res.status(500).json({ error: 'Failed to create session' });
+            }
+
+            // Store user info in session
+            req.session.userId = user.id;
+            req.session.userEmail = user.email;
+            req.session.userRole = user.role;
+
+            // Log audit event
+            auth.logAuditEvent(db, user.id, 'user_login', req, { method: 'local' });
+
+            logger.info('User logged in', { userId: user.id, email: user.email });
+
+            res.json({
+                message: 'Login successful',
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    role: user.role,
+                    photoUrl: user.photoUrl
+                }
+            });
+        });
+    })(req, res, next);
+});
+
+// Google OAuth initiation
+app.get('/auth/google',
+    passport.authenticate('google', {
+        scope: ['profile', 'email']
+    })
+);
+
+// Google OAuth callback
+app.get('/auth/google/callback',
+    passport.authenticate('google', { failureRedirect: '/login.html' }),
+    (req, res) => {
+        // Store user info in session
+        req.session.userId = req.user.id;
+        req.session.userEmail = req.user.email;
+        req.session.userRole = req.user.role;
+
+        // Log audit event
+        auth.logAuditEvent(db, req.user.id, 'user_login', req, { method: 'google' });
+
+        logger.info('User logged in via Google', { userId: req.user.id, email: req.user.email });
+
+        res.redirect('/');
+    }
+);
+
+// Logout
+app.post('/api/auth/logout', auth.isAuthenticated, (req, res) => {
+    const userId = req.session.userId;
+
+    // Log audit event
+    auth.logAuditEvent(db, userId, 'user_logout', req);
+
+    req.logout((err) => {
+        if (err) {
+            logger.error('Logout error', { error: err.message });
+            return res.status(500).json({ error: 'Logout failed' });
+        }
+
+        req.session.destroy((err) => {
+            if (err) {
+                logger.error('Session destruction error', { error: err.message });
+            }
+
+            res.clearCookie('connect.sid');
+            res.json({ message: 'Logout successful' });
+        });
+    });
+});
+
+// Get current user
+app.get('/api/auth/me', auth.isAuthenticated, (req, res) => {
+    try {
+        const user = db.prepare(`
+            SELECT id, email, firstName, lastName, role, photoUrl,
+                   isActive, emailVerified, dateOfBirth, isMinor, createdAt, lastLogin
+            FROM users
+            WHERE id = ?
+        `).get(req.session.userId);
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.json(user);
+    } catch (error) {
+        logger.error('Error fetching current user', { error: error.message });
+        res.status(500).json({ error: 'Failed to fetch user' });
+    }
+});
+
+// Get notifications for current user
+app.get('/api/notifications', auth.isAuthenticated, (req, res) => {
+    try {
+        const notifications = db.prepare(`
+            SELECT * FROM notifications
+            WHERE userId = ?
+            ORDER BY createdAt DESC
+            LIMIT 50
+        `).all(req.session.userId);
+
+        res.json(notifications);
+    } catch (error) {
+        logger.error('Error fetching notifications', { error: error.message });
+        res.status(500).json({ error: 'Failed to fetch notifications' });
+    }
+});
+
+// Mark notification as read
+app.put('/api/notifications/:id/read', auth.isAuthenticated, (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const result = db.prepare(`
+            UPDATE notifications
+            SET isRead = 1, readAt = datetime('now')
+            WHERE id = ? AND userId = ?
+        `).run(id, req.session.userId);
+
+        if (result.changes === 0) {
+            return res.status(404).json({ error: 'Notification not found' });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        logger.error('Error marking notification as read', { error: error.message });
+        res.status(500).json({ error: 'Failed to update notification' });
+    }
+});
+
+// ============================================================================
 // API Routes
 
 // Get all sales

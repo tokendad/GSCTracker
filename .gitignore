@@ -227,3 +227,6 @@ docs/CLAUDE.md
 
 # Local Docker config (use docker-compose.yml.example as template)
 docker-compose.yml
+
+# V2 Implementation working docs (local/temporary)
+docs/v2 Implementation/
