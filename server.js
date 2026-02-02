@@ -435,7 +435,6 @@ try {
     db.exec('CREATE INDEX IF NOT EXISTS idx_donations_userId ON donations(userId)');
     db.exec('CREATE INDEX IF NOT EXISTS idx_events_userId ON events(userId)');
     db.exec('CREATE INDEX IF NOT EXISTS idx_events_troopId ON events(troopId)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_payment_methods_userId ON payment_methods(userId)');
     
     // ========================================================================
     // Migrations for existing tables
