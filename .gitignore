@@ -228,3 +228,8 @@ docs/CLAUDE.md
 # Local Docker config (use docker-compose.yml.example as template)
 docker-compose.yml
 
+# Version planning documentation (kept locally, not in version control)
+docs/v2\ Implementation/
+docs/v3\ Project\ Documentation/
+docs/v4\ Project\ Documentation/
+

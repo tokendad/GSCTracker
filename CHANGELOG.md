@@ -2,6 +2,90 @@
 
 All notable changes to Apex Scout Manager will be documented in this file.
 
+## [2.0.0] - 2026-02-02
+
+### Major Release: Multi-User Authentication & Troop Management Foundation
+
+This major release transforms Apex Scout Manager from a single-user application into a comprehensive multi-user troop management platform with enterprise-grade security.
+
+### Added
+
+**Authentication & Security:**
+- Multi-user authentication system with email/password and Google OAuth 2.0 support
+- Session-based authentication with HTTP-only cookies and IP tracking
+- Password hashing with bcryptjs (12 salt rounds)
+- Rate limiting on authentication endpoints
+- COPPA compliance features for minors (age verification, parental consent tracking)
+- Audit logging system for all user actions
+
+**User Management:**
+- User registration and login system
+- User roles: Scout, Parent, Troop Leader, Council Admin
+- Multi-user data isolation - users only see their own data
+- Account lockout after failed login attempts
+
+**Organization & Troop Management:**
+- Council organization structure
+- Multiple troops per council with troop details (number, type, leadership)
+- Scout levels support (Daisy, Brownie, Junior, Cadette, Senior, Ambassador)
+- Troop membership with role-based permissions
+- Scout-parent linking for family account management
+- Troop goals tracking (boxes sold, revenue, participation, events)
+- Troop invitations and member management
+
+**Database Enhancements:**
+- New multi-user schema with foreign key relationships
+- Automatic database migration from v1.0 to v2.0
+- New tables: users, sessions, councils, troops, troop_members, troop_goals, audit_log, notifications
+- Backward compatibility with v1.0 data
+
+**Data Backup & Safety:**
+- Automatic timestamped database backups on application startup
+- Migration verification script to ensure data integrity
+- Backup retention (keeps last 5 backups)
+
+### Changed
+
+**Architecture:**
+- Refactored authentication from custom middleware to Passport.js
+- Updated all API endpoints to include user context filtering
+- All database queries now respect user isolation boundaries
+- Docker configuration updated for production deployment
+
+**Data Model:**
+- Added `userId` foreign key to: sales, profile, donations, events tables
+- Added `troopId` to events for troop-specific tracking
+- Profile table now linked to multi-user system
+- All existing v1.0 data automatically migrated with admin user assignment
+
+**Frontend:**
+- Added login.html and register.html for authentication
+- User info displayed in dashboard header
+- Added logout functionality
+- Session management integrated
+
+### Security
+
+- Implemented role-based access control (RBAC)
+- Passport.js authentication strategies (local + Google OAuth)
+- Audit trail for compliance and security monitoring
+- Removed hardcoded credentials - uses environment variables
+- COPPA-compliant minor tracking
+
+### Migration
+
+- Automatic v1.0 → v2.0 database migration with backup
+- Default admin user created from v1.0 profile
+- All existing sales, donations, and events linked to admin user
+- Existing data fully preserved and accessible
+
+### Breaking Changes
+
+- Database schema updated (migration required)
+- Login now required to access application
+- All API endpoints now require authentication
+- User context required for all data operations
+
 ## [1.2.0] - 2026-01-21
 
 ### Removed
