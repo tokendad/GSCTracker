@@ -319,7 +319,7 @@ try {
         logger.info('  No users found, creating default admin user...');
 
         // Get existing profile data if it exists
-        let email = 'admin@asm.local';
+        let email = 'welefort@gmail.com';
         let firstName = 'Admin';
         let troopNumber = '0000';
 
