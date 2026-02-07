@@ -43,10 +43,13 @@ A mobile-responsive web application for tracking cookie sales and managing scout
 - **Photo Upload**: Store and display scout photos
 
 ### 💾 Data Management
-- **Persistent Data**: SQLite database storage for reliable data management
-- **Data Backups**: Automatic timestamped database backups on startup
+- **PostgreSQL Database**: Enterprise-grade PostgreSQL 16 with UUID primary keys
+- **Redis Session Storage**: High-performance Redis 7 for session management
+- **Connection Pooling**: Efficient concurrent user support with configurable pool size
+- **Data Backups**: Automatic database backups and transaction safety
 - **Import/Export**: Excel-based import/export for bulk operations
 - **Bulk Operations**: Delete multiple sales at once
+- **Asynchronous Operations**: Non-blocking async/await database pattern
 
 ### 🎨 User Experience
 - **Mobile-First Design**: Optimized for phone screens with responsive layout
@@ -95,7 +98,13 @@ A mobile-responsive web application for tracking cookie sales and managing scout
 
 ## Quick Start
 
-### Using Docker (Recommended - Production)
+### Prerequisites
+- **Docker and Docker Compose** (recommended)
+- **Node.js 18+** (for local development)
+- **PostgreSQL 14+** (automatically provided via Docker)
+- **Redis 6+** (automatically provided via Docker)
+
+### Using Docker (Recommended - Production & Development)
 
 The easiest way to run Apex Scout Manager is using Docker with the pre-configured setup:
 

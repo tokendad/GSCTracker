@@ -30,7 +30,7 @@ body {
 
 /* Container */
 .container {
-    max-width: 800px;
+    max-width: none;
     margin: 0 auto;
     min-height: 100vh;
     display: flex;
@@ -45,6 +45,9 @@ header {
     text-align: center;
     box-shadow: var(--shadow);
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 header h1 {
@@ -53,32 +56,86 @@ header h1 {
     margin-bottom: 0.5rem;
 }
 
-/* User Info */
-.user-info {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    font-size: 0.9rem;
-}
-
-.user-name {
-    opacity: 0.9;
-}
-
-.logout-btn {
+/* Mobile Menu Button */
+.mobile-menu-btn {
+    display: none;
+    position: absolute;
+    left: 1rem;
     background: rgba(255, 255, 255, 0.2);
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.3);
-    padding: 0.35rem 0.75rem;
+    padding: 0.5rem;
     border-radius: 6px;
-    font-size: 0.8rem;
     cursor: pointer;
+    font-size: 1.5rem;
+    line-height: 1;
     transition: background 0.2s;
+    z-index: 1001;
 }
 
-.logout-btn:hover {
+.mobile-menu-btn:hover {
     background: rgba(255, 255, 255, 0.3);
+}
+
+.hamburger-icon {
+    display: block;
+    width: 24px;
+    height: 24px;
+    text-align: center;
+}
+
+/* Sidebar Overlay */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.active {
+    display: block;
+    opacity: 1;
+}
+
+/* Invitations Button in Header */
+.invitations-btn {
+    position: absolute;
+    right: 1rem;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.invitations-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.invite-icon {
+    font-size: 1.25rem;
+}
+
+.notification-badge {
+    background: #dc3545;
+    color: white;
+    border-radius: 12px;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    min-width: 20px;
+    text-align: center;
 }
 
 /* Main Content */
@@ -955,12 +1012,112 @@ footer {
 
 /* Tablet Styles */
 @media (min-width: 768px) {
-    header h1 {
-        font-size: 2rem;
+    /* DESKTOP SIDEBAR LAYOUT */
+    .container {
+        flex-direction: row;
+        flex-wrap: wrap;
     }
 
+    header {
+        width: 100%;
+        order: 1;
+    }
+
+    /* Transform horizontal tabs into vertical sidebar */
+    .tab-nav {
+        order: 2;
+        width: 160px !important;
+        height: calc(100vh - 80px);
+        position: fixed;
+        left: 0 !important;
+        top: 80px;
+        flex-direction: column;
+        background-color: var(--background-color);
+        border-right: 1px solid var(--border-color);
+        border-bottom: none;
+        padding: 0.75rem 0.5rem;
+        padding-top: 0;
+        overflow-y: auto;
+        z-index: 100;
+        box-shadow: none;
+        transition: none;
+    }
+
+    /* Hide mobile menu button on desktop */
+    .mobile-menu-btn {
+        display: none;
+    }
+
+    /* Hide overlay on desktop */
+    .sidebar-overlay {
+        display: none !important;
+    }
+
+    /* Vertical sidebar buttons */
+    .tab-btn {
+        flex: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 8px;
+        margin-bottom: 6px;
+        border-radius: 8px;
+        border-bottom: none;
+        min-height: auto;
+        background: transparent;
+        transition: all 0.2s ease;
+    }
+
+    .tab-btn .tab-icon {
+        font-size: 1.75rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .tab-btn .tab-label {
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-align: center;
+    }
+
+    /* Active state with left border indicator */
+    .tab-btn.active {
+        background-color: var(--card-background);
+        border-left: 4px solid var(--primary-color);
+        border-bottom: none;
+        box-shadow: var(--shadow);
+        margin-left: -4px;
+        padding-left: 20px;
+    }
+
+    .tab-btn.active .tab-label {
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+
+    /* Hover effect for desktop */
+    .tab-btn:hover:not(.active) {
+        background-color: rgba(255, 255, 255, 0.7);
+        transform: translateX(2px);
+    }
+
+    /* Main content area offset for sidebar */
     main {
+        order: 3;
+        width: calc(100% - 160px);
+        margin-left: 160px;
+        max-width: 1400px;
         padding: 2rem;
+    }
+
+    /* Footer alignment */
+    footer {
+        order: 4;
+        width: calc(100% - 160px);
+        margin-left: 160px;
+    }
+
+    header h1 {
+        font-size: 2rem;
     }
 
     section {
@@ -1080,6 +1237,43 @@ footer {
     background-color: var(--primary-color);
 }
 
+/* Dark Theme Sidebar Styles */
+[data-theme="dark"] .tab-nav {
+    background-color: #2d2d2d;
+}
+
+[data-theme="dark"] .tab-btn.active {
+    background-color: rgba(30, 123, 60, 0.2);
+}
+
+[data-theme="dark"] .sidebar-divider {
+    background-color: #444;
+}
+
+[data-theme="dark"] .logout-btn-sidebar {
+    color: #ff6b6b;
+}
+
+[data-theme="dark"] .logout-btn-sidebar .tab-icon,
+[data-theme="dark"] .logout-btn-sidebar .tab-label {
+    color: #ff6b6b;
+}
+
+@media (min-width: 768px) {
+    [data-theme="dark"] .tab-nav {
+        background-color: #1f1f1f;
+        border-right-color: #333;
+    }
+
+    [data-theme="dark"] .tab-btn:hover:not(.active) {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    [data-theme="dark"] .tab-btn.active {
+        background-color: var(--card-background);
+    }
+}
+
 /* Event Sales Section */
 .event-sales-section textarea {
     width: 100%;
@@ -1189,7 +1383,12 @@ footer {
     justify-content: flex-end;
 }
 
-@media (max-width: 480px) {
+/* Mobile Styles */
+@media (max-width: 767px) {
+    .mobile-menu-btn {
+        display: block;
+    }
+
     .form-row {
         grid-template-columns: 1fr;
     }
@@ -1200,51 +1399,93 @@ footer {
     }
 }
 
-/* Tab Navigation */
+/* Tab Navigation - Mobile Sidebar (default) */
 .tab-nav {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 280px;
+    height: 100vh;
     display: flex;
-    background-color: #e8e8e8;
-    border-bottom: 1px solid var(--border-color);
+    flex-direction: column;
+    background-color: var(--card-background);
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    padding: 1rem 0.5rem;
+    padding-top: 80px;
+    overflow-y: auto;
+    transition: left 0.3s ease;
+}
+
+.tab-nav.active {
+    left: 0;
 }
 
 .tab-btn {
-    flex: 1;
+    flex: none;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    justify-content: center;
-    padding: 0.75rem 0.5rem;
+    justify-content: flex-start;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.5rem;
     background: transparent;
     border: none;
-    border-bottom: 3px solid transparent;
+    border-left: 4px solid transparent;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
     -webkit-tap-highlight-color: transparent;
-    min-height: 60px;
+    text-align: left;
 }
 
 .tab-btn .tab-icon {
-    font-size: 1.5rem;
-    margin-bottom: 0.25rem;
+    font-size: 1.75rem;
+    flex-shrink: 0;
 }
 
 .tab-btn .tab-label {
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: 0.95rem;
+    font-weight: 500;
     color: var(--text-color);
+    flex: 1;
 }
 
 .tab-btn.active {
-    background-color: white;
-    border-bottom-color: var(--primary-color);
+    background-color: rgba(30, 123, 60, 0.1);
+    border-left-color: var(--primary-color);
 }
 
-.tab-btn.active .tab-label {
+.tab-btn.active .tab-label,
+.tab-btn.active .tab-icon {
     color: var(--primary-color);
 }
 
-.tab-btn:hover:not(.active) {
-    background-color: rgba(255, 255, 255, 0.5);
+.tab-btn:active {
+    background-color: rgba(30, 123, 60, 0.15);
+}
+
+/* Sidebar Divider */
+.sidebar-divider {
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 1rem 1.25rem;
+}
+
+/* Logout Button in Sidebar */
+.logout-btn-sidebar {
+    margin-top: auto;
+    color: #dc3545;
+}
+
+.logout-btn-sidebar .tab-icon,
+.logout-btn-sidebar .tab-label {
+    color: #dc3545;
+}
+
+.logout-btn-sidebar:active {
+    background-color: rgba(220, 53, 69, 0.1);
 }
 
 /* Views */
@@ -3419,4 +3660,21 @@ footer {
 [data-theme="dark"] .cookie-badge.certification {
     background: rgba(21, 101, 192, 0.3);
     color: #90caf9;
+}
+
+/* Print Styles - Hide navigation when printing */
+@media print {
+    .tab-nav {
+        display: none;
+    }
+
+    main {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    footer {
+        margin-left: 0;
+        width: 100%;
+    }
 }

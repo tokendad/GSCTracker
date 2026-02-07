@@ -1930,12 +1930,45 @@ function setupNavigation() {
     tabButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             switchView(btn.dataset.view);
+            // Close mobile menu after selection
+            closeMobileMenu();
         });
     });
 
     // Load last view or default to profile
     let lastView = localStorage.getItem('lastView') || 'profile';
     switchView(lastView);
+}
+
+// Mobile Menu Management
+function setupMobileMenu() {
+    const menuBtn = document.getElementById('mobileMenuBtn');
+    const sidebar = document.querySelector('.tab-nav');
+    const overlay = document.getElementById('sidebarOverlay');
+
+    if (menuBtn) {
+        menuBtn.addEventListener('click', toggleMobileMenu);
+    }
+
+    if (overlay) {
+        overlay.addEventListener('click', closeMobileMenu);
+    }
+}
+
+function toggleMobileMenu() {
+    const sidebar = document.querySelector('.tab-nav');
+    const overlay = document.getElementById('sidebarOverlay');
+
+    sidebar.classList.toggle('active');
+    overlay.classList.toggle('active');
+}
+
+function closeMobileMenu() {
+    const sidebar = document.querySelector('.tab-nav');
+    const overlay = document.getElementById('sidebarOverlay');
+
+    if (sidebar) sidebar.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
 }
 
 // Theme Management
@@ -3131,6 +3164,7 @@ if (document.readyState === 'loading') {
         await init();
         setupRoleBasedUI();
         setupNavigation();
+        setupMobileMenu();
         setupTheme();
         setupImport();
         setupCookieTableListeners();
@@ -3144,6 +3178,7 @@ if (document.readyState === 'loading') {
         await init();
         setupRoleBasedUI();
         setupNavigation();
+        setupMobileMenu();
         setupTheme();
         setupImport();
         setupCookieTableListeners();

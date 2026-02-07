@@ -136,20 +136,18 @@ function canAccessResource(req, res, next) {
 
 /**
  * Log authentication event to audit log
- * @param {Object} db - Database instance
- * @param {number} userId - User ID
+ * @param {Object} db - Database query helpers
+ * @param {string} userId - User ID (UUID)
  * @param {string} action - Action performed
  * @param {Object} req - Express request object
  * @param {Object} details - Additional details
  */
-function logAuditEvent(db, userId, action, req, details = {}) {
+async function logAuditEvent(db, userId, action, req, details = {}) {
     try {
-        const stmt = db.prepare(`
-            INSERT INTO audit_log (userId, action, resourceType, resourceId, ipAddress, userAgent, details)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        `);
-
-        stmt.run(
+        await db.run(`
+            INSERT INTO audit_log ("userId", action, "resourceType", "resourceId", "ipAddress", "userAgent", details)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `, [
             userId,
             action,
             details.resourceType || 'auth',
@@ -157,7 +155,7 @@ function logAuditEvent(db, userId, action, req, details = {}) {
             req.ip || req.connection.remoteAddress,
             req.get('user-agent'),
             JSON.stringify(details)
-        );
+        ]);
     } catch (error) {
         logger.error('Failed to log audit event:', error);
     }
@@ -227,21 +225,19 @@ function validatePassword(password) {
 
 /**
  * Create notification for user
- * @param {Object} db - Database instance
- * @param {number} userId - User ID
+ * @param {Object} db - Database query helpers
+ * @param {string} userId - User ID (UUID)
  * @param {string} type - Notification type
  * @param {string} title - Notification title
  * @param {string} message - Notification message
  * @param {string} actionUrl - Optional action URL
  */
-function createNotification(db, userId, type, title, message, actionUrl = null) {
+async function createNotification(db, userId, type, title, message, actionUrl = null) {
     try {
-        const stmt = db.prepare(`
-            INSERT INTO notifications (userId, type, title, message, actionUrl)
-            VALUES (?, ?, ?, ?, ?)
-        `);
-
-        stmt.run(userId, type, title, message, actionUrl);
+        await db.run(`
+            INSERT INTO notifications ("userId", type, title, message, "actionUrl")
+            VALUES ($1, $2, $3, $4, $5)
+        `, [userId, type, title, message, actionUrl]);
     } catch (error) {
         logger.error('Failed to create notification:', error);
     }
@@ -249,18 +245,18 @@ function createNotification(db, userId, type, title, message, actionUrl = null) 
 
 /**
  * Clean up expired sessions
- * @param {Object} db - Database instance
+ * @param {Object} db - Database query helpers
+ * @returns {Promise<void>}
  */
-function cleanupExpiredSessions(db) {
+async function cleanupExpiredSessions(db) {
     try {
-        const stmt = db.prepare(`
+        const rowCount = await db.run(`
             DELETE FROM sessions
-            WHERE datetime(expiresAt) < datetime('now')
+            WHERE "expiresAt" < NOW()
         `);
 
-        const result = stmt.run();
-        if (result.changes > 0) {
-            logger.info(`Cleaned up ${result.changes} expired sessions`);
+        if (rowCount > 0) {
+            logger.info(`Cleaned up ${rowCount} expired sessions`);
         }
     } catch (error) {
         logger.error('Failed to cleanup expired sessions:', error);

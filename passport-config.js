@@ -14,7 +14,7 @@ const logger = require('./logger');
 
 /**
  * Configure Passport with authentication strategies
- * @param {Object} db - Database instance
+ * @param {Object} db - Database query helpers
  */
 function configurePassport(db) {
     // Serialize user to session
@@ -23,9 +23,9 @@ function configurePassport(db) {
     });
 
     // Deserialize user from session
-    passport.deserializeUser((id, done) => {
+    passport.deserializeUser(async (id, done) => {
         try {
-            const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+            const user = await db.getOne('SELECT * FROM users WHERE id = $1', [id]);
             if (user) {
                 done(null, user);
             } else {
@@ -43,7 +43,7 @@ function configurePassport(db) {
     }, async (email, password, done) => {
         try {
             // Find user by email
-            const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+            const user = await db.getOne('SELECT * FROM users WHERE email = $1', [email]);
 
             if (!user) {
                 return done(null, false, { message: 'Invalid email or password' });
@@ -67,7 +67,7 @@ function configurePassport(db) {
             }
 
             // Update last login
-            db.prepare('UPDATE users SET lastLogin = datetime(\'now\') WHERE id = ?').run(user.id);
+            await db.run('UPDATE users SET "lastLogin" = NOW() WHERE id = $1', [user.id]);
 
             logger.info(`User logged in: ${user.email}`);
             return done(null, user);
@@ -90,16 +90,16 @@ function configurePassport(db) {
         }, async (accessToken, refreshToken, profile, done) => {
             try {
                 // Check if user exists with this Google ID
-                let user = db.prepare('SELECT * FROM users WHERE googleId = ?').get(profile.id);
+                let user = await db.getOne('SELECT * FROM users WHERE "googleId" = $1', [profile.id]);
 
                 if (user) {
                     // Update last login and photo
-                    db.prepare(`
+                    await db.run(`
                         UPDATE users
-                        SET lastLogin = datetime('now'),
-                            photoUrl = ?
-                        WHERE id = ?
-                    `).run(profile.photos && profile.photos[0] ? profile.photos[0].value : null, user.id);
+                        SET "lastLogin" = NOW(),
+                            "photoUrl" = $1
+                        WHERE id = $2
+                    `, [profile.photos && profile.photos[0] ? profile.photos[0].value : null, user.id]);
 
                     logger.info(`User logged in via Google: ${user.email}`);
                     return done(null, user);
@@ -108,22 +108,22 @@ function configurePassport(db) {
                 // Check if user exists with this email
                 const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
                 if (email) {
-                    user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+                    user = await db.getOne('SELECT * FROM users WHERE email = $1', [email]);
 
                     if (user) {
                         // Link Google account to existing user
-                        db.prepare(`
+                        await db.run(`
                             UPDATE users
-                            SET googleId = ?,
-                                photoUrl = ?,
-                                emailVerified = 1,
-                                lastLogin = datetime('now')
-                            WHERE id = ?
-                        `).run(
+                            SET "googleId" = $1,
+                                "photoUrl" = $2,
+                                "emailVerified" = true,
+                                "lastLogin" = NOW()
+                            WHERE id = $3
+                        `, [
                             profile.id,
                             profile.photos && profile.photos[0] ? profile.photos[0].value : null,
                             user.id
-                        );
+                        ]);
 
                         logger.info(`Linked Google account to existing user: ${email}`);
                         return done(null, user);
@@ -139,39 +139,34 @@ function configurePassport(db) {
                 const lastName = profile.name.familyName || '';
                 const photoUrl = profile.photos && profile.photos[0] ? profile.photos[0].value : null;
 
-                const insertUser = db.prepare(`
+                user = await db.getOne(`
                     INSERT INTO users (
                         email,
-                        firstName,
-                        lastName,
-                        googleId,
-                        photoUrl,
-                        emailVerified,
-                        isActive,
-                        role,
-                        createdAt,
-                        lastLogin
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-                `);
-
-                const result = insertUser.run(
+                        "firstName",
+                        "lastName",
+                        "googleId",
+                        "photoUrl",
+                        "emailVerified",
+                        "isActive",
+                        role
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    RETURNING *
+                `, [
                     email,
                     firstName,
                     lastName,
                     profile.id,
                     photoUrl,
-                    1, // Email verified by Google
-                    1, // Active
+                    true, // Email verified by Google
+                    true, // Active
                     'scout' // Default role
-                );
-
-                user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+                ]);
 
                 // Create default profile for new user
-                db.prepare(`
-                    INSERT INTO profile (userId, scoutName, email)
-                    VALUES (?, ?, ?)
-                `).run(user.id, `${firstName} ${lastName}`.trim(), email);
+                await db.run(`
+                    INSERT INTO profile ("userId", "scoutName", email)
+                    VALUES ($1, $2, $3)
+                `, [user.id, `${firstName} ${lastName}`.trim(), email]);
 
                 logger.info(`New user registered via Google: ${email}`);
                 return done(null, user);

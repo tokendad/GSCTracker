@@ -6,21 +6,22 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <title>Apex Scout Manager</title>
-    <link rel="stylesheet" href="styles.css?v=3">
+    <link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🍪 Apex Scout Manager</h1>
-            <div id="userInfo" class="user-info">
-                <span id="userName" class="user-name"></span>
-                <button id="invitationsBtn" class="invitations-btn" title="Pending Invitations" onclick="openInvitationsModal()" style="display: none;">
-                    <span class="invite-icon">📬</span>
-                    <span id="invitationBadge" class="notification-badge">0</span>
-                </button>
-                <button id="logoutBtn" class="logout-btn" title="Logout">↪ Logout</button>
-            </div>
+            <button id="mobileMenuBtn" class="mobile-menu-btn" title="Menu">
+                <span class="hamburger-icon">☰</span>
+            </button>
+            <h1>Apex Scout Manager</h1>
+            <button id="invitationsBtn" class="invitations-btn" title="Pending Invitations" onclick="openInvitationsModal()" style="display: none;">
+                <span class="invite-icon">📬</span>
+                <span id="invitationBadge" class="notification-badge">0</span>
+            </button>
         </header>
+
+        <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
         <nav class="tab-nav">
             <button class="tab-btn active" data-view="profile">
@@ -32,7 +33,7 @@
                 <span class="tab-label">Summary</span>
             </button>
             <button class="tab-btn" data-view="sales">
-                <span class="tab-icon">🍪</span>
+                <span class="tab-icon">💰</span>
                 <span class="tab-label">Individual</span>
             </button>
             <button class="tab-btn" data-view="events">
@@ -46,6 +47,11 @@
             <button class="tab-btn" data-view="troopLeader" id="troopLeaderTab" style="display: none;">
                 <span class="tab-icon">👥</span>
                 <span class="tab-label">Troop</span>
+            </button>
+            <div class="sidebar-divider"></div>
+            <button id="logoutBtn" class="tab-btn logout-btn-sidebar">
+                <span class="tab-icon">↪</span>
+                <span class="tab-label">Logout</span>
             </button>
         </nav>
 

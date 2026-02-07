@@ -2,6 +2,150 @@
 
 All notable changes to Apex Scout Manager will be documented in this file.
 
+## [2.0.1] - 2026-02-07
+
+### Major Infrastructure Upgrade: PostgreSQL Migration
+
+This release completes the migration from SQLite to PostgreSQL with UUID primary keys, significantly improving scalability, concurrent user support, and production readiness.
+
+### Added
+
+**Database Migration to PostgreSQL:**
+- Migrated from SQLite to PostgreSQL 16 with full UUID support
+- Implemented UUID v4 primary keys across all 19 database tables
+- Created comprehensive PostgreSQL schema with proper constraints and indexes
+- Added connection pooling with pg-pool (configurable pool size 2-10 connections)
+- Implemented query helper utilities for abstraction layer
+- Added slow query detection and logging (>1000ms threshold)
+
+**Session Storage Migration:**
+- Migrated session storage from SQLite to Redis 7
+- Implemented automatic session TTL management via Redis
+- Added Redis connection error handling and automatic reconnection
+- Removed manual session cleanup (Redis handles TTL automatically)
+
+**Code Modernization:**
+- Converted all 200+ database queries from synchronous to asynchronous (async/await)
+- Updated all 54 API route handlers to async pattern
+- Converted Passport authentication strategies to async
+- Implemented proper transaction handling with PostgreSQL pattern
+- Added comprehensive error handling for all database operations
+
+**Documentation:**
+- Created PostgreSQL migration guides and conversion summaries
+- Updated all phase documentation with PostgreSQL status
+- Added database connection troubleshooting guides
+- Created .env.example with PostgreSQL and Redis configuration
+
+### Changed
+
+**Database Architecture:**
+- SQLite (synchronous) → PostgreSQL 16 (asynchronous)
+- Integer auto-increment IDs → UUID v4 primary keys
+- Boolean representation: `0/1` → `true/false`
+- Timestamp functions: `datetime('now')` → `NOW()`
+- Query placeholders: `?` → `$1, $2, $3...` (PostgreSQL style)
+- Column naming: Added quotes for camelCase columns (e.g., `"userId"`, `"firstName"`)
+
+**Session Management:**
+- Session store: SQLiteStore → RedisStore
+- Session backend: connect-sqlite3 → connect-redis
+- TTL management: Manual cleanup → Automatic Redis expiration
+
+**Query Pattern:**
+- Synchronous prepared statements → Asynchronous parameterized queries
+- `db.prepare().get()` → `await db.getOne()`
+- `db.prepare().all()` → `await db.getAll()`
+- `db.prepare().run()` → `await db.run()`
+- `db.transaction()` → `await db.transaction(async (client) => {...})`
+
+**Dependencies:**
+- Added: `pg` (^8.11.3), `pg-pool` (^3.6.1), `redis` (^4.6.12), `connect-redis` (^7.1.0), `uuid` (^9.0.1), `dotenv` (^17.2.4)
+- Retained (for backward compatibility): `better-sqlite3`, `connect-sqlite3`
+
+### Infrastructure
+
+**Docker Services:**
+- PostgreSQL 16 Alpine with health checks and volume persistence
+- Redis 7 Alpine with health checks and data volumes
+- Docker Compose configuration for development environment
+
+**Environment Configuration:**
+- Added PostgreSQL connection settings (host, port, database, user, password, SSL, pool config)
+- Added Redis connection settings (host, port, password, database)
+- Implemented dotenv for environment variable management
+
+### Performance
+
+- Connection pooling enables efficient concurrent user support
+- Asynchronous queries prevent blocking operations
+- Redis session storage provides sub-millisecond session access
+- PostgreSQL query optimizer for complex JOIN operations
+- Prepared statement caching via pg-pool
+
+### Migration Status
+
+**Completed:**
+- ✅ PostgreSQL schema creation with UUIDs (19 tables)
+- ✅ Redis session storage implementation
+- ✅ All 200+ query conversions to async/await
+- ✅ Passport strategy updates
+- ✅ Docker containerization
+- ✅ Development environment setup
+- ✅ Admin user creation
+- ✅ Full endpoint testing
+
+**Verified Working:**
+- ✅ Authentication (login, logout, session persistence)
+- ✅ User profile management
+- ✅ Sales CRUD operations
+- ✅ Donations CRUD operations
+- ✅ Events CRUD operations
+- ✅ Payment methods management
+- ✅ All troop management endpoints
+- ✅ Cookie catalog and seasons
+- ✅ Invitation system
+- ✅ Bulk imports and exports
+
+### Technical Details
+
+**Schema Enhancements:**
+- Foreign key constraints with CASCADE and SET NULL actions
+- CHECK constraints for enum-like fields
+- Comprehensive indexing on foreign keys and frequently queried columns
+- Unique constraints on natural keys (email, googleId, token)
+- Proper NULL handling and default values
+
+**Security Improvements:**
+- Parameterized queries prevent SQL injection
+- Connection pooling with connection limits
+- Redis password support for production
+- SSL support for PostgreSQL connections
+- Audit logging with UUID tracking
+
+### Breaking Changes
+
+**For Developers:**
+- All database access must now be asynchronous (requires `await`)
+- Column names with camelCase must be quoted in SQL queries
+- Transaction syntax changed to PostgreSQL pattern
+- Integer IDs replaced with UUID strings
+- Boolean values are now `true/false` instead of `0/1`
+
+**For Deployment:**
+- Requires PostgreSQL 14+ and Redis 6+ servers
+- New environment variables required (see .env.example)
+- Database must be initialized with migration scripts
+- Docker Compose recommended for local development
+
+### Notes
+
+This is a major infrastructure upgrade that significantly improves the application's ability to scale to multiple concurrent users. The migration to PostgreSQL with UUIDs provides enterprise-grade reliability and prepares the application for production deployment.
+
+All existing functionality has been preserved with 100% feature parity. The asynchronous architecture improves responsiveness under load.
+
+---
+
 ## [2.0.0] - 2026-02-02
 
 ### Major Release: Multi-User Authentication & Troop Management Foundation
