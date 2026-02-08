@@ -65,7 +65,7 @@ header h1 {
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.3);
     padding: 0.5rem;
-    border-radius: 6px;
+    border-radius: 12px;
     cursor: pointer;
     font-size: 1.5rem;
     line-height: 1;
@@ -111,7 +111,7 @@ header h1 {
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.3);
     padding: 0.5rem;
-    border-radius: 6px;
+    border-radius: 12px;
     cursor: pointer;
     transition: background 0.2s;
     display: flex;
@@ -141,16 +141,17 @@ header h1 {
 /* Main Content */
 main {
     flex: 1;
-    padding: 1rem;
+    padding: 1.25rem 1rem;
 }
 
 /* Sections */
 section {
     background: var(--card-background);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    box-shadow: var(--shadow);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border-color);
 }
 
 section h2 {
@@ -176,7 +177,7 @@ section h2 {
     width: 100%;
     padding: 0.875rem;
     border: 2px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     background-color: white;
     transition: border-color 0.2s;
     /* Prevent automatic zoom on focus in iOS Safari - 16px minimum */
@@ -196,7 +197,7 @@ section h2 {
     font-size: 1rem;
     font-weight: 600;
     border: none;
-    border-radius: 8px;
+    border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s;
     /* Prevent tap highlight on mobile */
@@ -275,7 +276,7 @@ section h2 {
     padding: 1rem;
     background: var(--background-color);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     gap: 1rem;
 }
 
@@ -321,7 +322,7 @@ section h2 {
     background: linear-gradient(135deg, var(--primary-color), #15562a);
     color: white;
     padding: 1.25rem;
-    border-radius: 8px;
+    border-radius: 16px;
     text-align: center;
 }
 
@@ -352,7 +353,7 @@ section h2 {
     align-items: center;
     padding: 1rem;
     background: var(--background-color);
-    border-radius: 8px;
+    border-radius: 12px;
     border: 1px solid var(--border-color);
 }
 
@@ -378,7 +379,7 @@ section h2 {
 .add-payment-form {
     background: var(--background-color);
     padding: 1rem;
-    border-radius: 8px;
+    border-radius: 12px;
     border: 1px solid var(--border-color);
 }
 
@@ -434,7 +435,7 @@ section h2 {
     align-items: center;
     padding: 1rem;
     background: var(--background-color);
-    border-radius: 8px;
+    border-radius: 16px;
     border-left: 4px solid var(--primary-color);
 }
 
@@ -470,7 +471,7 @@ section h2 {
     color: white;
     border: none;
     padding: 0.5rem 0.75rem;
-    border-radius: 6px;
+    border-radius: 12px;
     font-size: 0.875rem;
     cursor: pointer;
     min-height: 40px;
@@ -495,7 +496,7 @@ section h2 {
     align-items: center;
     padding: 0.875rem;
     background: var(--background-color);
-    border-radius: 8px;
+    border-radius: 16px;
 }
 
 .breakdown-cookie {
@@ -546,7 +547,7 @@ section h2 {
     margin-top: 1rem;
     padding: 1rem;
     background: var(--background-color);
-    border-radius: 8px;
+    border-radius: 12px;
 }
 
 .qr-code-display img {
@@ -580,7 +581,7 @@ section h2 {
 .goal-item {
     background: var(--background-color);
     padding: 1rem;
-    border-radius: 8px;
+    border-radius: 16px;
     text-align: center;
 }
 
@@ -650,7 +651,7 @@ section h2 {
     align-items: center;
     padding: 1rem;
     background: var(--background-color);
-    border-radius: 8px;
+    border-radius: 16px;
     border-left: 4px solid var(--secondary-color);
 }
 
@@ -687,7 +688,7 @@ section h2 {
 .cookie-selection-table-container {
     overflow-x: auto;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     margin-bottom: 1rem;
 }
 
@@ -750,7 +751,7 @@ section h2 {
 .sales-table-container {
     overflow-x: auto;
     background: var(--card-background);
-    border-radius: 8px;
+    border-radius: 12px;
     border: 1px solid var(--border-color);
     margin-top: 1rem;
 }
@@ -1061,7 +1062,7 @@ footer {
         justify-content: center;
         padding: 12px 8px;
         margin-bottom: 6px;
-        border-radius: 8px;
+        border-radius: 12px;
         border-bottom: none;
         min-height: auto;
         background: transparent;
@@ -1279,7 +1280,7 @@ footer {
     width: 100%;
     padding: 0.875rem;
     border: 2px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     background-color: white;
     transition: border-color 0.2s;
     font-size: 16px;
@@ -1308,7 +1309,7 @@ footer {
 .event-item {
     padding: 1.25rem;
     background: var(--background-color);
-    border-radius: 8px;
+    border-radius: 16px;
     border-left: 4px solid var(--secondary-color);
 }
 
@@ -1369,7 +1370,7 @@ footer {
     padding: 0.5rem;
     background: linear-gradient(135deg, var(--primary-color), #15562a);
     color: white;
-    border-radius: 6px;
+    border-radius: 12px;
     margin-top: 0.25rem;
 }
 
@@ -1433,7 +1434,7 @@ footer {
     background: transparent;
     border: none;
     border-left: 4px solid transparent;
-    border-radius: 8px;
+    border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s;
     -webkit-tap-highlight-color: transparent;
@@ -1496,7 +1497,7 @@ footer {
 /* Settings Section */
 .settings-section {
     background: var(--card-background);
-    border-radius: 12px;
+    border-radius: 16px;
     padding: 1.5rem;
     margin-bottom: 1.5rem;
     box-shadow: var(--shadow);
@@ -1512,7 +1513,7 @@ footer {
     margin-bottom: 1.5rem;
     padding: 1.25rem;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 16px;
     background: var(--card-background);
 }
 
@@ -1628,7 +1629,7 @@ footer {
 .import-status {
     margin-top: 1rem;
     padding: 0.75rem;
-    border-radius: 8px;
+    border-radius: 12px;
     font-size: 0.875rem;
     display: none;
 }
@@ -1664,7 +1665,7 @@ footer {
     width: 100%;
     padding: 0.75rem;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     font-size: 1rem;
     background-color: var(--card-background);
     color: var(--text-color);
@@ -1717,7 +1718,7 @@ footer {
 
 .order-details-modal {
     background: var(--card-background);
-    border-radius: 12px;
+    border-radius: 16px;
     max-width: 500px;
     width: 100%;
     max-height: 90vh;
@@ -1732,7 +1733,7 @@ footer {
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
     background: linear-gradient(135deg, var(--primary-color), #15562a);
-    border-radius: 12px 12px 0 0;
+    border-radius: 16px 16px 0 0;
 }
 
 .order-details-header h3 {
@@ -1849,7 +1850,7 @@ footer {
     width: 100%;
     padding: 0.5rem;
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 12px;
     font-size: 0.9rem;
     background: var(--input-background, #fff);
     color: var(--text-color);
@@ -2017,7 +2018,7 @@ footer {
 
 .qr-card {
     background: var(--card-background);
-    border-radius: 12px;
+    border-radius: 16px;
     padding: 1.5rem;
     text-align: center;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -2047,7 +2048,7 @@ footer {
     justify-content: center;
     padding: 1rem;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     background: var(--background-color);
 }
 
@@ -2095,7 +2096,7 @@ footer {
 .form-section {
     background: var(--card-background);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 1rem;
     margin-bottom: 1rem;
 }
@@ -2243,7 +2244,7 @@ footer {
     padding: 1rem;
     margin-top: 1rem;
     background: var(--card-background);
-    border-radius: 12px;
+    border-radius: 16px;
     margin-left: 1rem;
     margin-right: 1rem;
 }
@@ -2273,7 +2274,7 @@ footer {
     padding: 0.75rem;
     background: white;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     transition: background-color 0.2s;
 }
 
@@ -2298,7 +2299,7 @@ footer {
     border: 1px solid var(--border-color);
     background: white;
     color: var(--primary-color);
-    border-radius: 8px;
+    border-radius: 12px;
     font-size: 1.25rem;
     font-weight: bold;
     cursor: pointer;
@@ -2324,7 +2325,7 @@ footer {
     height: 36px;
     text-align: center;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     font-size: 1rem;
     font-weight: 500;
 }
@@ -2396,7 +2397,7 @@ footer {
 .cookie-detail-card {
     background: var(--card-background);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: 16px;
     padding: 1.25rem;
     text-align: center;
     transition: transform 0.2s, box-shadow 0.2s;
@@ -2417,7 +2418,7 @@ footer {
     height: 120px;
     object-fit: contain;
     margin-bottom: 0.75rem;
-    border-radius: 8px;
+    border-radius: 12px;
 }
 
 .cookie-icon {
@@ -2518,7 +2519,7 @@ footer {
 /* Payment Section in Order Details */
 .payment-summary {
     background: rgba(0, 0, 0, 0.02);
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 1rem;
     margin-bottom: 1rem;
 }
@@ -2675,7 +2676,7 @@ footer {
     min-width: 200px;
     padding: 0.75rem;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     font-size: 1rem;
     background: var(--card-background);
     color: var(--text-color);
@@ -2744,7 +2745,7 @@ footer {
 .troop-goals-section,
 .troop-sales-section {
     background: var(--card-background);
-    border-radius: 12px;
+    border-radius: 16px;
     padding: 1.25rem;
     box-shadow: var(--shadow);
 }
@@ -2824,7 +2825,7 @@ footer {
 
 .goal-card {
     background: rgba(30, 123, 60, 0.05);
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 1rem;
     border-left: 4px solid var(--primary-color);
 }
@@ -2904,7 +2905,7 @@ footer {
     align-items: center;
     padding: 0.75rem;
     background: rgba(30, 123, 60, 0.05);
-    border-radius: 8px;
+    border-radius: 12px;
 }
 
 .cookie-name {
@@ -2973,7 +2974,7 @@ footer {
 
 .modal-content {
     background: var(--card-background);
-    border-radius: 12px;
+    border-radius: 16px;
     width: 100%;
     max-width: 500px;
     max-height: 90vh;
@@ -3039,7 +3040,7 @@ footer {
     flex-direction: column;
     padding: 0.75rem;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     margin-bottom: 0.5rem;
     cursor: pointer;
     transition: background 0.2s;
@@ -3061,7 +3062,7 @@ footer {
 .search-selected {
     padding: 0.75rem;
     background: rgba(30, 123, 60, 0.1);
-    border-radius: 8px;
+    border-radius: 12px;
     color: var(--primary-color);
     font-weight: 500;
 }
@@ -3308,7 +3309,7 @@ footer {
 .invitation-item {
     padding: 1rem;
     background: var(--card-background, #f5f5f5);
-    border-radius: 8px;
+    border-radius: 16px;
     border-left: 4px solid #4CAF50;
 }
 
@@ -3353,7 +3354,7 @@ footer {
 
 .troop-leaderboard-section {
     background: var(--card-background, white);
-    border-radius: 12px;
+    border-radius: 16px;
     padding: 1.25rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
@@ -3373,7 +3374,7 @@ footer {
 
 .metric-select {
     padding: 0.35rem 0.5rem;
-    border-radius: 6px;
+    border-radius: 12px;
     border: 1px solid var(--border-color, #ddd);
     font-size: 0.8rem;
     background: var(--background-color, #f5f5f5);
@@ -3393,7 +3394,7 @@ footer {
     gap: 0.75rem;
     padding: 0.65rem;
     background: var(--background-color, #f5f5f5);
-    border-radius: 8px;
+    border-radius: 12px;
     transition: transform 0.2s, background 0.2s;
 }
 
@@ -3563,7 +3564,7 @@ footer {
 
 .goal-card {
     background: rgba(76, 175, 80, 0.08);
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 1rem;
     margin-bottom: 0.75rem;
 }
