@@ -233,3 +233,7 @@ docs/v2\ Implementation/
 docs/v3\ Project\ Documentation/
 docs/v4\ Project\ Documentation/
 
+# Ignore reference docs folder (generated or local references)
+docs/References/
+docs/References/**
+
