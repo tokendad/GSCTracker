@@ -116,6 +116,14 @@ async function testConnection() {
     }
 }
 
+/**
+ * Close the database pool
+ * @returns {Promise<void>}
+ */
+async function close() {
+    await pool.end();
+}
+
 module.exports = {
     query,
     getOne,
@@ -123,5 +131,6 @@ module.exports = {
     run,
     transaction,
     testConnection,
+    close,
     pool
 };
