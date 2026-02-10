@@ -3581,6 +3581,33 @@ loadTroopData = async function(troopId) {
     loadGoalProgress();
 };
 
+// Setup table scroll indicators
+function setupScrollIndicators() {
+    const containers = document.querySelectorAll(
+        '.cookie-selection-table-container, .sales-table-container, .members-table-wrapper'
+    );
+
+    function updateScrollIndicators() {
+        containers.forEach(container => {
+            if (container.scrollWidth > container.clientWidth) {
+                container.classList.add('has-scroll');
+            } else {
+                container.classList.remove('has-scroll');
+            }
+        });
+    }
+
+    // Check on load and resize
+    updateScrollIndicators();
+    window.addEventListener('resize', updateScrollIndicators);
+
+    // Also check after dynamic content updates
+    containers.forEach(container => {
+        const observer = new MutationObserver(updateScrollIndicators);
+        observer.observe(container, { childList: true, subtree: true });
+    });
+}
+
 // Initialize app when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', async () => {
@@ -3594,6 +3621,7 @@ if (document.readyState === 'loading') {
         setupDangerZone();
         setupTroopManagement();
         setupTroopNavigation();
+        setupScrollIndicators();
         loadInvitations();
         loadCookieCatalog();
     });
@@ -3607,6 +3635,7 @@ if (document.readyState === 'loading') {
         setupImport();
         setupCookieTableListeners();
         setupDangerZone();
+        setupScrollIndicators();
         setupTroopManagement();
         setupTroopNavigation();
         loadInvitations();

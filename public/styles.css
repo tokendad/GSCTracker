@@ -794,6 +794,43 @@ section h2 {
     font-style: italic;
 }
 
+/* Table Scroll Indicators */
+.cookie-selection-table-container,
+.sales-table-container,
+.members-table-wrapper {
+    position: relative;
+}
+
+/* Gradient shadow on right side when scrollable */
+.cookie-selection-table-container::after,
+.sales-table-container::after,
+.members-table-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 40px;
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.1));
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+/* Show shadow when scrollable */
+.cookie-selection-table-container.has-scroll::after,
+.sales-table-container.has-scroll::after,
+.members-table-wrapper.has-scroll::after {
+    opacity: 1;
+}
+
+/* Dark mode scroll indicators */
+[data-theme="dark"] .cookie-selection-table-container::after,
+[data-theme="dark"] .sales-table-container::after,
+[data-theme="dark"] .members-table-wrapper::after {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1));
+}
+
 /* Cookie Selection Table */
 .cookie-selection-table-container {
     overflow-x: auto;
@@ -1121,7 +1158,68 @@ footer {
     border-top: 1px solid var(--border-color);
 }
 
-/* Tablet Styles */
+/* Tablet Styles (768px - 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+    /* Summary cards: 2 columns (not 4) */
+    .summary-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Cookie sales grid: 2 columns */
+    .cookie-sales-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Inventory grid: 2 columns */
+    .inventory-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Form rows: stack on tablet */
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    /* Members table: hide less critical columns */
+    .members-table th:nth-child(5),
+    .members-table td:nth-child(5) {
+        display: none;
+    }
+
+    /* Modal form rows: stack */
+    .modal-body .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Desktop Styles (1024px+) */
+@media (min-width: 1024px) {
+    /* 4-column summary cards */
+    .summary-cards {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    /* 3-column grids */
+    .inventory-grid,
+    .cookie-sales-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    /* Enhanced typography for large screens */
+    header h1 {
+        font-size: var(--text-5xl);
+    }
+
+    section {
+        padding: var(--space-3xl);
+    }
+
+    section h2 {
+        font-size: var(--text-3xl);
+    }
+}
+
+/* Desktop Layout (768px+) - Sidebar Navigation */
 @media (min-width: 768px) {
     /* DESKTOP SIDEBAR LAYOUT */
     .container {
@@ -1405,8 +1503,14 @@ footer {
 
 .form-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
+    grid-template-columns: 1fr;
+    gap: var(--space-lg);
+}
+
+@media (min-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr 1fr;
+    }
 }
 
 .events-list {
@@ -2374,7 +2478,8 @@ footer {
 
 .inventory-grid {
     display: grid;
-    gap: 0.75rem;
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
 }
 
 .inventory-item {
@@ -2801,8 +2906,8 @@ footer {
 
 .summary-cards {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
+    grid-template-columns: 1fr;
+    gap: var(--space-lg);
 }
 
 .summary-card {
