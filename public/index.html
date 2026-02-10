@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <title>Apex Scout Manager</title>
-    <link rel="stylesheet" href="styles.css?v=11">
+    <link rel="stylesheet" href="styles.css?v=12">
 </head>
 <body>
     <div class="container">
@@ -27,14 +27,6 @@
             <button class="tab-btn active" data-view="profile">
                 <span class="tab-icon">👤</span>
                 <span class="tab-label">Profile</span>
-            </button>
-            <button class="tab-btn" data-view="dashboard">
-                <span class="tab-icon">📊</span>
-                <span class="tab-label">Summary</span>
-            </button>
-            <button class="tab-btn" data-view="sales">
-                <span class="tab-icon">💰</span>
-                <span class="tab-label">Individual</span>
             </button>
             <button class="tab-btn" data-view="events">
                 <span class="tab-icon">📅</span>
@@ -251,202 +243,6 @@
             </div>
 
             <!-- Dashboard View -->
-            <div id="view-dashboard" class="view-section hidden">
-                <!-- Summary Section -->
-                <section class="summary-section">
-                    <h2>Sales Summary</h2>
-                    <div class="summary-card">
-                        <div class="summary-item">
-                            <span class="summary-label">Total Boxes Sold</span>
-                            <span class="summary-value" id="totalBoxes">0</span>
-                        </div>
-                        <div class="summary-item">
-                            <span class="summary-label">Individual Sales</span>
-                            <span class="summary-value" id="individualSales">0 boxes</span>
-                        </div>
-                        <div class="summary-item">
-                            <span class="summary-label">Event Sales</span>
-                            <span class="summary-value" id="eventSales">0 boxes</span>
-                        </div>
-                        <div class="summary-item summary-revenue">
-                            <span class="summary-label">Total Revenue</span>
-                            <span class="summary-value" id="totalRevenue">$0</span>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Goal Section -->
-                <section class="goal-section">
-                    <h2>Sales Goal</h2>
-                    <div class="goal-inputs">
-                        <div class="form-group">
-                            <label for="goalBoxes">Goal (boxes)</label>
-                            <input type="number" id="goalBoxes" min="0" value="0" placeholder="e.g., 120">
-                            <small>Note: 12 boxes = 1 case</small>
-                        </div>
-                        <button id="setGoalBtn" class="btn btn-secondary">Set Goal</button>
-                    </div>
-                    <div class="goal-display">
-                        <div class="goal-item">
-                            <span class="goal-label">Goal</span>
-                            <span class="goal-value" id="goalBoxesDisplay">0 boxes ($0)</span>
-                        </div>
-                        <div class="goal-item">
-                            <span class="goal-label">Progress</span>
-                            <span class="goal-value" id="goalProgress">0%</span>
-                        </div>
-                        <div class="goal-progress-bar">
-                            <div class="goal-progress-fill" id="goalProgressFill"></div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Cookie Breakdown -->
-                <section class="breakdown-section">
-                    <h2>Cookie Breakdown</h2>
-                    <div id="cookieBreakdown" class="cookie-breakdown">
-                        <p class="empty-message">No data to display yet.</p>
-                    </div>
-                </section>
-            </div>
-
-            <!-- Sales View -->
-            <div id="view-sales" class="view-section hidden">
-                <!-- Add Sale Form -->
-                <section class="add-sale-section">
-                    <h2>Record a Sale</h2>
-                    <form id="saleForm">
-                        <!-- Customer Information -->
-                        <div class="form-section">
-                            <h3>Customer Information</h3>
-                            <div class="form-group">
-                                <label for="customerName">Customer Name</label>
-                                <input type="text" id="customerName" placeholder="e.g., Mrs. Smith">
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="customerAddress">Address</label>
-                                    <input type="text" id="customerAddress" placeholder="e.g., 123 Main St">
-                                </div>
-                                <div class="form-group">
-                                    <label for="customerPhone">Phone</label>
-                                    <input type="tel" id="customerPhone" placeholder="e.g., (555) 123-4567">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Cookie Selection Table -->
-                        <div class="form-section">
-                            <h3>Cookies</h3>
-                            <div class="cookie-selection-table-container">
-                                <table class="cookie-selection-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Cookie</th>
-                                            <th>Boxes</th>
-                                            <th>Cases</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>Thin Mints®</td>
-                                            <td><input type="number" class="qty-input" data-cookie="Thin Mints" data-unit="box" min="0"></td>
-                                            <td><input type="number" class="qty-input" data-cookie="Thin Mints" data-unit="case" min="0"></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Samoas®</td>
-                                            <td><input type="number" class="qty-input" data-cookie="Samoas" data-unit="box" min="0"></td>
-                                            <td><input type="number" class="qty-input" data-cookie="Samoas" data-unit="case" min="0"></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Tagalongs®</td>
-                                            <td><input type="number" class="qty-input" data-cookie="Tagalongs" data-unit="box" min="0"></td>
-                                            <td><input type="number" class="qty-input" data-cookie="Tagalongs" data-unit="case" min="0"></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Trefoils®</td>
-                                            <td><input type="number" class="qty-input" data-cookie="Trefoils" data-unit="box" min="0"></td>
-                                            <td><input type="number" class="qty-input" data-cookie="Trefoils" data-unit="case" min="0"></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Do-si-dos®</td>
-                                            <td><input type="number" class="qty-input" data-cookie="Do-si-dos" data-unit="box" min="0"></td>
-                                            <td><input type="number" class="qty-input" data-cookie="Do-si-dos" data-unit="case" min="0"></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Lemon-Ups®</td>
-                                            <td><input type="number" class="qty-input" data-cookie="Lemon-Ups" data-unit="box" min="0"></td>
-                                            <td><input type="number" class="qty-input" data-cookie="Lemon-Ups" data-unit="case" min="0"></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Adventurefuls®</td>
-                                            <td><input type="number" class="qty-input" data-cookie="Adventurefuls" data-unit="box" min="0"></td>
-                                            <td><input type="number" class="qty-input" data-cookie="Adventurefuls" data-unit="case" min="0"></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Exploremores™</td>
-                                            <td><input type="number" class="qty-input" data-cookie="Exploremores" data-unit="box" min="0"></td>
-                                            <td><input type="number" class="qty-input" data-cookie="Exploremores" data-unit="case" min="0"></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Toffee-tastic® (GF)</td>
-                                            <td><input type="number" class="qty-input" data-cookie="Toffee-tastic" data-unit="box" min="0"></td>
-                                            <td><input type="number" class="qty-input" data-cookie="Toffee-tastic" data-unit="case" min="0"></td>
-                                        </tr>
-                                    </tbody>
-                                    <tfoot>
-                                        <tr>
-                                            <td><strong>Total</strong></td>
-                                            <td id="totalBoxesInput">0</td>
-                                            <td id="totalCasesInput">0</td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-                            <div class="order-total">
-                                <span>Order Total: </span>
-                                <span id="orderTotalAmount">$0.00</span>
-                            </div>
-                        </div>
-
-                        <!-- Payment Information -->
-                        <div class="form-section">
-                            <h3>Payment</h3>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="paymentMethod">Payment Method</label>
-                                    <select id="paymentMethod">
-                                        <option value="">Select...</option>
-                                        <option value="cash">Cash</option>
-                                        <option value="check">Check</option>
-                                        <option value="venmo">Venmo</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="amountCollected">Collected ($)</label>
-                                    <input type="number" id="amountCollected" min="0" step="0.01" value="0">
-                                </div>
-                                <div class="form-group">
-                                    <label for="amountDue">Due ($)</label>
-                                    <input type="number" id="amountDue" min="0" step="0.01" value="0">
-                                </div>
-                            </div>
-                        </div>
-
-                        <input type="hidden" id="saleType" value="individual">
-                        <button type="submit" class="btn btn-primary btn-large">Add Sale</button>
-                    </form>
-                </section>
-
-                <!-- Sales List -->
-                <section class="sales-list-section">
-                    <h2>Recent Sales</h2>
-                    <div id="salesList" class="sales-list">
-                        <p class="empty-message">No sales recorded yet. Add your first sale above!</p>
-                    </div>
-                </section>
-            </div>
-
             <!-- Events View -->
             <div id="view-events" class="view-section hidden">
                 <div class="calendar-controls-header">
@@ -528,13 +324,19 @@
                 <!-- Filters -->
                 <div class="calendar-filter-bar">
                     <span class="filter-label">Show:</span>
+                    <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="Troop" checked> Pack/Troop</label>
                     <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="Lion" checked> Lion</label>
                     <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="Tiger" checked> Tiger</label>
                     <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="Wolf" checked> Wolf</label>
                     <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="Bear" checked> Bear</label>
                     <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="Webelos" checked> Webelos</label>
                     <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="AOL" checked> AOL</label>
-                    <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="Troop" checked> Pack/Troop</label>
+                    <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="Daisy" checked> Daisy</label>
+                    <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="Brownie" checked> Brownie</label>
+                    <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="Junior" checked> Junior</label>
+                    <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="Cadette" checked> Cadette</label>
+                    <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="Senior" checked> Senior</label>
+                    <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="Ambassador" checked> Ambassador</label>
                 </div>
 
                 <!-- Calendar -->
@@ -583,11 +385,6 @@
                         </div>
                     </div>
 
-                    <!-- Clear Data -->
-                    <div class="settings-group">
-                        <h3>Data Management</h3>
-                        <button id="clearAll" class="btn btn-danger">Clear All Sales</button>
-                    </div>
                 </section>
             </div>
 
@@ -628,6 +425,7 @@
                         <button class="troop-tab" data-tab="events">Events</button>
                         <button class="troop-tab" data-tab="media">Media</button>
                         <button class="troop-tab" data-tab="library">Library</button>
+                        <button class="troop-tab" data-tab="permissions">Permissions</button>
                     </div>
 
                     <div id="troop-content" class="troop-content">
@@ -811,6 +609,54 @@
                         <div id="troop-tab-library" class="troop-tab-panel hidden">
                             <h2>Library</h2>
                             <p>Document library and resources (placeholder).</p>
+                        </div>
+
+                        <!-- Permissions Tab -->
+                        <div id="troop-tab-permissions" class="troop-tab-panel hidden">
+                            <h2>Member Permissions</h2>
+                            <p class="permissions-description">
+                                Adjust what each member can do within this troop. Changes override the role defaults.<br>
+                                <strong>T</strong> = Troop &nbsp; <strong>D</strong> = Den/Patrol &nbsp;
+                                <strong>H</strong> = Household &nbsp; <strong>S</strong> = Self &nbsp;
+                                <strong>---</strong> = None
+                            </p>
+
+                            <div class="permissions-controls">
+                                <div class="form-group">
+                                    <label for="permsMemberSelect">Select Member</label>
+                                    <select id="permsMemberSelect">
+                                        <option value="">Choose a member...</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div id="permsMatrixContainer" style="display: none;">
+                                <div class="permissions-member-info" id="permsMemberInfo"></div>
+                                <div class="permissions-matrix-wrapper">
+                                    <table class="permissions-matrix" id="permsMatrix">
+                                        <thead>
+                                            <tr>
+                                                <th class="priv-name-col">Privilege</th>
+                                                <th class="priv-scope-col">T</th>
+                                                <th class="priv-scope-col">D</th>
+                                                <th class="priv-scope-col">H</th>
+                                                <th class="priv-scope-col">S</th>
+                                                <th class="priv-scope-col">---</th>
+                                                <th class="priv-default-col">Default</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="permsMatrixBody"></tbody>
+                                    </table>
+                                </div>
+                                <div class="permissions-actions">
+                                    <button class="btn btn-secondary" id="resetPermsBtn">Reset All to Defaults</button>
+                                    <button class="btn btn-primary" id="savePermsBtn">Save Changes</button>
+                                </div>
+                            </div>
+
+                            <div id="permsEmptyState" class="empty-state">
+                                <p>Select a member above to view and manage their permissions.</p>
+                            </div>
                         </div>
                     </div><!-- end troop-content -->
 
@@ -1077,6 +923,6 @@
         </footer>
     </div>
 
-    <script src="script.js?v=11"></script>
+    <script src="script.js?v=12"></script>
 </body>
 </html>

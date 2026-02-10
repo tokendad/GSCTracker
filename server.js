@@ -18,6 +18,65 @@ const { configurePassport } = require('./passport-config');
 const db = require('./database/query-helpers');
 const pool = require('./database/pg-pool');
 
+// ============================================================================
+// Privilege System Constants
+// ============================================================================
+const PRIVILEGE_DEFINITIONS = [
+    // Troop & Member Management
+    { code: 'view_roster', name: 'View troop roster', category: 'Troop & Member Management' },
+    { code: 'manage_members', name: 'Manage troop members', category: 'Troop & Member Management' },
+    { code: 'manage_troop_settings', name: 'Manage troop settings', category: 'Troop & Member Management' },
+    { code: 'send_invitations', name: 'Send invitations', category: 'Troop & Member Management' },
+    { code: 'import_roster', name: 'Import roster', category: 'Troop & Member Management' },
+    { code: 'manage_member_roles', name: 'Manage member roles', category: 'Troop & Member Management' },
+    { code: 'manage_privileges', name: 'Manage privileges', category: 'Troop & Member Management' },
+    // Scout Profiles & Advancement
+    { code: 'view_scout_profiles', name: 'View scout profiles', category: 'Scout Profiles & Advancement' },
+    { code: 'edit_scout_level', name: 'Edit scout level', category: 'Scout Profiles & Advancement' },
+    { code: 'edit_scout_status', name: 'Edit scout status', category: 'Scout Profiles & Advancement' },
+    { code: 'award_badges', name: 'Award badges', category: 'Scout Profiles & Advancement' },
+    { code: 'view_badge_progress', name: 'View badge progress', category: 'Scout Profiles & Advancement' },
+    { code: 'edit_personal_info', name: 'Edit personal info', category: 'Scout Profiles & Advancement' },
+    // Calendar & Events
+    { code: 'view_events', name: 'View events', category: 'Calendar & Events' },
+    { code: 'manage_events', name: 'Manage events', category: 'Calendar & Events' },
+    { code: 'export_calendar', name: 'Export calendar', category: 'Calendar & Events' },
+    // Fundraising & Sales (future)
+    { code: 'view_sales', name: 'View sales data', category: 'Fundraising & Sales', future: true },
+    { code: 'record_sales', name: 'Record sales', category: 'Fundraising & Sales', future: true },
+    { code: 'manage_fundraisers', name: 'Manage fundraisers', category: 'Fundraising & Sales', future: true },
+    { code: 'view_troop_sales', name: 'View troop sales', category: 'Fundraising & Sales', future: true },
+    { code: 'view_financials', name: 'View financial accounts', category: 'Fundraising & Sales', future: true },
+    { code: 'manage_financials', name: 'Manage financial accounts', category: 'Fundraising & Sales', future: true },
+    // Donations
+    { code: 'view_donations', name: 'View donations', category: 'Donations' },
+    { code: 'record_donations', name: 'Record donations', category: 'Donations' },
+    { code: 'delete_donations', name: 'Delete donations', category: 'Donations' },
+    // Troop Goals & Reporting
+    { code: 'view_goals', name: 'View goals', category: 'Troop Goals & Reporting' },
+    { code: 'manage_goals', name: 'Manage goals', category: 'Troop Goals & Reporting' },
+    { code: 'view_leaderboard', name: 'View leaderboard', category: 'Troop Goals & Reporting' },
+    // Data & Settings
+    { code: 'manage_payment_methods', name: 'Manage payment methods', category: 'Data & Settings' },
+    { code: 'import_data', name: 'Import data', category: 'Data & Settings' },
+    { code: 'export_data', name: 'Export data', category: 'Data & Settings' },
+    { code: 'delete_own_data', name: 'Delete own data', category: 'Data & Settings' },
+];
+
+const VALID_PRIVILEGE_CODES = PRIVILEGE_DEFINITIONS.map(p => p.code);
+const VALID_SCOPES = ['T', 'D', 'H', 'S', 'none'];
+
+// Default privilege scopes per troop role (from Account Access Schema)
+const ROLE_PRIVILEGE_DEFAULTS = {
+    member:        { view_roster:'none', manage_members:'none', manage_troop_settings:'none', send_invitations:'none', import_roster:'none', manage_member_roles:'none', manage_privileges:'none', view_scout_profiles:'S', edit_scout_level:'none', edit_scout_status:'none', award_badges:'none', view_badge_progress:'S', edit_personal_info:'none', view_events:'T', manage_events:'none', export_calendar:'T', view_sales:'S', record_sales:'S', manage_fundraisers:'none', view_troop_sales:'none', view_financials:'none', manage_financials:'none', view_donations:'S', record_donations:'S', delete_donations:'S', view_goals:'T', manage_goals:'none', view_leaderboard:'T', manage_payment_methods:'S', import_data:'none', export_data:'S', delete_own_data:'S' },
+    parent:        { view_roster:'none', manage_members:'none', manage_troop_settings:'none', send_invitations:'none', import_roster:'none', manage_member_roles:'none', manage_privileges:'none', view_scout_profiles:'H', edit_scout_level:'none', edit_scout_status:'none', award_badges:'none', view_badge_progress:'H', edit_personal_info:'H', view_events:'T', manage_events:'none', export_calendar:'T', view_sales:'H', record_sales:'H', manage_fundraisers:'none', view_troop_sales:'none', view_financials:'none', manage_financials:'none', view_donations:'H', record_donations:'H', delete_donations:'H', view_goals:'T', manage_goals:'none', view_leaderboard:'T', manage_payment_methods:'S', import_data:'none', export_data:'H', delete_own_data:'S' },
+    volunteer:     { view_roster:'T', manage_members:'none', manage_troop_settings:'none', send_invitations:'none', import_roster:'none', manage_member_roles:'none', manage_privileges:'none', view_scout_profiles:'none', edit_scout_level:'none', edit_scout_status:'none', award_badges:'none', view_badge_progress:'none', edit_personal_info:'none', view_events:'T', manage_events:'none', export_calendar:'T', view_sales:'none', record_sales:'none', manage_fundraisers:'none', view_troop_sales:'none', view_financials:'none', manage_financials:'none', view_donations:'none', record_donations:'none', delete_donations:'none', view_goals:'T', manage_goals:'none', view_leaderboard:'T', manage_payment_methods:'S', import_data:'none', export_data:'none', delete_own_data:'S' },
+    assistant:     { view_roster:'T', manage_members:'none', manage_troop_settings:'none', send_invitations:'none', import_roster:'none', manage_member_roles:'none', manage_privileges:'none', view_scout_profiles:'D', edit_scout_level:'none', edit_scout_status:'none', award_badges:'none', view_badge_progress:'D', edit_personal_info:'none', view_events:'T', manage_events:'T', export_calendar:'T', view_sales:'none', record_sales:'none', manage_fundraisers:'none', view_troop_sales:'none', view_financials:'none', manage_financials:'none', view_donations:'none', record_donations:'none', delete_donations:'none', view_goals:'T', manage_goals:'none', view_leaderboard:'T', manage_payment_methods:'S', import_data:'none', export_data:'none', delete_own_data:'S' },
+    'co-leader':   { view_roster:'T', manage_members:'T', manage_troop_settings:'T', send_invitations:'T', import_roster:'T', manage_member_roles:'none', manage_privileges:'none', view_scout_profiles:'T', edit_scout_level:'T', edit_scout_status:'T', award_badges:'T', view_badge_progress:'T', edit_personal_info:'T', view_events:'T', manage_events:'T', export_calendar:'T', view_sales:'T', record_sales:'S', manage_fundraisers:'T', view_troop_sales:'T', view_financials:'T', manage_financials:'none', view_donations:'T', record_donations:'S', delete_donations:'S', view_goals:'T', manage_goals:'T', view_leaderboard:'T', manage_payment_methods:'S', import_data:'none', export_data:'T', delete_own_data:'S' },
+    cookie_leader: { view_roster:'T', manage_members:'none', manage_troop_settings:'none', send_invitations:'none', import_roster:'none', manage_member_roles:'none', manage_privileges:'none', view_scout_profiles:'none', edit_scout_level:'none', edit_scout_status:'none', award_badges:'none', view_badge_progress:'none', edit_personal_info:'none', view_events:'T', manage_events:'none', export_calendar:'T', view_sales:'T', record_sales:'T', manage_fundraisers:'T', view_troop_sales:'T', view_financials:'T', manage_financials:'T', view_donations:'T', record_donations:'S', delete_donations:'none', view_goals:'T', manage_goals:'none', view_leaderboard:'T', manage_payment_methods:'S', import_data:'T', export_data:'T', delete_own_data:'S' },
+    troop_leader:  { view_roster:'T', manage_members:'T', manage_troop_settings:'T', send_invitations:'T', import_roster:'T', manage_member_roles:'T', manage_privileges:'T', view_scout_profiles:'T', edit_scout_level:'T', edit_scout_status:'T', award_badges:'T', view_badge_progress:'T', edit_personal_info:'T', view_events:'T', manage_events:'T', export_calendar:'T', view_sales:'T', record_sales:'T', manage_fundraisers:'T', view_troop_sales:'T', view_financials:'T', manage_financials:'T', view_donations:'T', record_donations:'T', delete_donations:'T', view_goals:'T', manage_goals:'T', view_leaderboard:'T', manage_payment_methods:'S', import_data:'T', export_data:'T', delete_own_data:'S' },
+    council_admin: { view_roster:'T', manage_members:'T', manage_troop_settings:'T', send_invitations:'T', import_roster:'T', manage_member_roles:'T', manage_privileges:'T', view_scout_profiles:'T', edit_scout_level:'T', edit_scout_status:'T', award_badges:'T', view_badge_progress:'T', edit_personal_info:'T', view_events:'T', manage_events:'T', export_calendar:'T', view_sales:'T', record_sales:'T', manage_fundraisers:'T', view_troop_sales:'T', view_financials:'T', manage_financials:'T', view_donations:'T', record_donations:'T', delete_donations:'T', view_goals:'T', manage_goals:'T', view_leaderboard:'T', manage_payment_methods:'S', import_data:'T', export_data:'T', delete_own_data:'S' },
+};
 
 // Configure multer for file uploads (memory storage)
 const upload = multer({
@@ -101,6 +160,26 @@ const PORT = process.env.PORT || 3000;
         `).catch(() => {});
         await db.query(`
             CREATE INDEX IF NOT EXISTS idx_events_troopId_date ON events("troopId", "eventDate")
+        `).catch(() => {});
+
+        // Create privilege_overrides table for per-user-per-troop privilege overrides
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS privilege_overrides (
+                id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                "troopId" UUID NOT NULL REFERENCES troops(id) ON DELETE CASCADE,
+                "userId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                "privilegeCode" VARCHAR(50) NOT NULL,
+                scope VARCHAR(10) NOT NULL,
+                "grantedBy" UUID NOT NULL REFERENCES users(id),
+                "grantedAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                "updatedAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT scope_check CHECK (scope IN ('T', 'D', 'H', 'S', 'none')),
+                CONSTRAINT unique_override UNIQUE ("troopId", "userId", "privilegeCode")
+            )
+        `).catch(() => {});
+        await db.query(`
+            CREATE INDEX IF NOT EXISTS idx_priv_overrides_troop_user
+            ON privilege_overrides("troopId", "userId")
         `).catch(() => {});
 
         logger.info('Schema migration checks completed');
@@ -1544,7 +1623,8 @@ app.get('/api/troop/:troopId/calendar/export', auth.isAuthenticated, async (req,
         
         events.forEach(event => {
             icsContent += 'BEGIN:VEVENT\r\n';
-            
+            icsContent += `UID:event-${event.id}@apexscoutmanager\r\n`;
+
             // Format timestamps (YYYYMMDDTHHmmssZ)
             const dateStr = new Date(event.eventDate).toISOString().replace(/[-:]/g, '').split('T')[0];
             
@@ -3345,6 +3425,179 @@ app.get('/api/scouts/:userId/available-badges', auth.isAuthenticated, async (req
     } catch (error) {
         logger.error('Error fetching available badges', { error: error.message, userId: req.params.userId });
         res.status(500).json({ error: 'Failed to fetch available badges' });
+    }
+});
+
+// ============================================================================
+// Privilege Management Routes
+// ============================================================================
+
+// Helper: build effective privileges for a member
+function buildEffectivePrivileges(troopRole, overrides) {
+    const roleDefaults = ROLE_PRIVILEGE_DEFAULTS[troopRole] || ROLE_PRIVILEGE_DEFAULTS.member;
+    const overrideMap = {};
+    for (const o of overrides) {
+        overrideMap[o.privilegeCode] = o.scope;
+    }
+    return PRIVILEGE_DEFINITIONS.map(priv => {
+        const defaultScope = roleDefaults[priv.code] || 'none';
+        const hasOverride = priv.code in overrideMap;
+        return {
+            code: priv.code,
+            name: priv.name,
+            category: priv.category,
+            future: priv.future || false,
+            defaultScope,
+            effectiveScope: hasOverride ? overrideMap[priv.code] : defaultScope,
+            hasOverride
+        };
+    });
+}
+
+// Get effective privileges for a troop member
+app.get('/api/troop/:troopId/members/:userId/privileges', auth.isAuthenticated, async (req, res) => {
+    try {
+        const { troopId, userId } = req.params;
+
+        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
+        if (!troop) return res.status(404).json({ error: 'Troop not found' });
+        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
+        const member = await db.getOne(`
+            SELECT tm.role as "troopRole", u.id, u."firstName", u."lastName"
+            FROM troop_members tm
+            JOIN users u ON tm."userId" = u.id
+            WHERE tm."troopId" = $1 AND tm."userId" = $2 AND tm.status = 'active'
+        `, [troopId, userId]);
+        if (!member) return res.status(404).json({ error: 'Member not found' });
+
+        const overrides = await db.getAll(
+            'SELECT "privilegeCode", scope FROM privilege_overrides WHERE "troopId" = $1 AND "userId" = $2',
+            [troopId, userId]
+        );
+
+        res.json({
+            member: { id: member.id, firstName: member.firstName, lastName: member.lastName, troopRole: member.troopRole },
+            privileges: buildEffectivePrivileges(member.troopRole, overrides)
+        });
+    } catch (error) {
+        logger.error('Error fetching member privileges', { error: error.message });
+        res.status(500).json({ error: 'Failed to fetch privileges' });
+    }
+});
+
+// Save privilege overrides for a troop member
+app.put('/api/troop/:troopId/members/:userId/privileges', auth.isAuthenticated, async (req, res) => {
+    try {
+        const { troopId, userId } = req.params;
+        const { overrides } = req.body;
+
+        if (!Array.isArray(overrides)) {
+            return res.status(400).json({ error: 'overrides must be an array' });
+        }
+
+        // Self-elevation block
+        if (userId === req.session.userId) {
+            return res.status(403).json({ error: 'Cannot modify your own privileges' });
+        }
+
+        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
+        if (!troop) return res.status(404).json({ error: 'Troop not found' });
+        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
+        const member = await db.getOne(`
+            SELECT tm.role as "troopRole", u.id
+            FROM troop_members tm JOIN users u ON tm."userId" = u.id
+            WHERE tm."troopId" = $1 AND tm."userId" = $2 AND tm.status = 'active'
+        `, [troopId, userId]);
+        if (!member) return res.status(404).json({ error: 'Member not found' });
+
+        const roleDefaults = ROLE_PRIVILEGE_DEFAULTS[member.troopRole] || ROLE_PRIVILEGE_DEFAULTS.member;
+
+        // Validate all overrides
+        for (const o of overrides) {
+            if (!VALID_PRIVILEGE_CODES.includes(o.code)) {
+                return res.status(400).json({ error: `Invalid privilege code: ${o.code}` });
+            }
+            if (!VALID_SCOPES.includes(o.scope)) {
+                return res.status(400).json({ error: `Invalid scope: ${o.scope}` });
+            }
+        }
+
+        await db.transaction(async (client) => {
+            for (const o of overrides) {
+                const defaultScope = roleDefaults[o.code] || 'none';
+                if (o.scope === defaultScope) {
+                    // Remove override if it matches the default
+                    await client.query(
+                        'DELETE FROM privilege_overrides WHERE "troopId" = $1 AND "userId" = $2 AND "privilegeCode" = $3',
+                        [troopId, userId, o.code]
+                    );
+                } else {
+                    // Upsert override
+                    await client.query(`
+                        INSERT INTO privilege_overrides ("troopId", "userId", "privilegeCode", scope, "grantedBy")
+                        VALUES ($1, $2, $3, $4, $5)
+                        ON CONFLICT ("troopId", "userId", "privilegeCode")
+                        DO UPDATE SET scope = $4, "grantedBy" = $5, "updatedAt" = CURRENT_TIMESTAMP
+                    `, [troopId, userId, o.code, o.scope, req.session.userId]);
+                }
+            }
+        });
+
+        await auth.logAuditEvent(db, req.session.userId, 'update_privileges', req, {
+            resourceType: 'privileges',
+            resourceId: userId,
+            troopId,
+            overrideCount: overrides.length
+        });
+
+        // Return updated state
+        const updatedOverrides = await db.getAll(
+            'SELECT "privilegeCode", scope FROM privilege_overrides WHERE "troopId" = $1 AND "userId" = $2',
+            [troopId, userId]
+        );
+
+        res.json({
+            member: { id: member.id, troopRole: member.troopRole },
+            privileges: buildEffectivePrivileges(member.troopRole, updatedOverrides)
+        });
+    } catch (error) {
+        logger.error('Error saving privilege overrides', { error: error.message });
+        res.status(500).json({ error: 'Failed to save privileges' });
+    }
+});
+
+// Reset all privilege overrides for a troop member
+app.delete('/api/troop/:troopId/members/:userId/privileges', auth.isAuthenticated, async (req, res) => {
+    try {
+        const { troopId, userId } = req.params;
+
+        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
+        if (!troop) return res.status(404).json({ error: 'Troop not found' });
+        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
+        await db.run(
+            'DELETE FROM privilege_overrides WHERE "troopId" = $1 AND "userId" = $2',
+            [troopId, userId]
+        );
+
+        await auth.logAuditEvent(db, req.session.userId, 'reset_privileges', req, {
+            resourceType: 'privileges',
+            resourceId: userId,
+            troopId
+        });
+
+        res.json({ success: true });
+    } catch (error) {
+        logger.error('Error resetting privilege overrides', { error: error.message });
+        res.status(500).json({ error: 'Failed to reset privileges' });
     }
 });
 

@@ -3,12 +3,6 @@
 // API base URL
 const API_BASE_URL = '/api';
 
-// Price per box (can be adjusted)
-const PRICE_PER_BOX = 6;
-
-// Boxes per case (standard cookie case)
-const BOXES_PER_CASE = 12;
-
 // Maximum photo file size in bytes (5MB)
 const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
 
@@ -59,13 +53,7 @@ async function logout() {
     window.location.href = '/login.html';
 }
 
-// Helper function to convert sale quantity to boxes
-function convertToBoxes(sale) {
-    return sale.unitType === 'case' ? sale.quantity * BOXES_PER_CASE : sale.quantity;
-}
-
 // Data arrays
-let sales = [];
 let donations = [];
 let events = [];
 let paymentMethods = [];
@@ -74,27 +62,61 @@ let profile = null;
 // Track which event is being edited (null = adding new)
 let editingEventId = null;
 
-// DOM Elements
-const saleForm = document.getElementById('saleForm');
-const customerNameInput = document.getElementById('customerName');
-const saleTypeInput = document.getElementById('saleType');
-const customerAddressInput = document.getElementById('customerAddress');
-const customerPhoneInput = document.getElementById('customerPhone');
-const amountCollectedInput = document.getElementById('amountCollected');
-const amountDueInput = document.getElementById('amountDue');
-const paymentMethodInput = document.getElementById('paymentMethod');
-const salesList = document.getElementById('salesList');
-const totalBoxesElement = document.getElementById('totalBoxes');
-const individualSalesElement = document.getElementById('individualSales');
-const eventSalesElement = document.getElementById('eventSales');
-const totalRevenueElement = document.getElementById('totalRevenue');
-const cookieBreakdownElement = document.getElementById('cookieBreakdown');
-const clearAllButton = document.getElementById('clearAll');
+// Privilege system constants (must match server-side definitions)
+const PRIVILEGE_DEFINITIONS = [
+    { code: 'view_roster', name: 'View troop roster', category: 'Troop & Member Management' },
+    { code: 'manage_members', name: 'Manage troop members', category: 'Troop & Member Management' },
+    { code: 'manage_troop_settings', name: 'Manage troop settings', category: 'Troop & Member Management' },
+    { code: 'send_invitations', name: 'Send invitations', category: 'Troop & Member Management' },
+    { code: 'import_roster', name: 'Import roster', category: 'Troop & Member Management' },
+    { code: 'manage_member_roles', name: 'Manage member roles', category: 'Troop & Member Management' },
+    { code: 'manage_privileges', name: 'Manage privileges', category: 'Troop & Member Management' },
+    { code: 'view_scout_profiles', name: 'View scout profiles', category: 'Scout Profiles & Advancement' },
+    { code: 'edit_scout_level', name: 'Edit scout level', category: 'Scout Profiles & Advancement' },
+    { code: 'edit_scout_status', name: 'Edit scout status', category: 'Scout Profiles & Advancement' },
+    { code: 'award_badges', name: 'Award badges', category: 'Scout Profiles & Advancement' },
+    { code: 'view_badge_progress', name: 'View badge progress', category: 'Scout Profiles & Advancement' },
+    { code: 'edit_personal_info', name: 'Edit personal info', category: 'Scout Profiles & Advancement' },
+    { code: 'view_events', name: 'View events', category: 'Calendar & Events' },
+    { code: 'manage_events', name: 'Manage events', category: 'Calendar & Events' },
+    { code: 'export_calendar', name: 'Export calendar', category: 'Calendar & Events' },
+    { code: 'view_sales', name: 'View sales data', category: 'Fundraising & Sales', future: true },
+    { code: 'record_sales', name: 'Record sales', category: 'Fundraising & Sales', future: true },
+    { code: 'manage_fundraisers', name: 'Manage fundraisers', category: 'Fundraising & Sales', future: true },
+    { code: 'view_troop_sales', name: 'View troop sales', category: 'Fundraising & Sales', future: true },
+    { code: 'view_financials', name: 'View financial accounts', category: 'Fundraising & Sales', future: true },
+    { code: 'manage_financials', name: 'Manage financial accounts', category: 'Fundraising & Sales', future: true },
+    { code: 'view_donations', name: 'View donations', category: 'Donations' },
+    { code: 'record_donations', name: 'Record donations', category: 'Donations' },
+    { code: 'delete_donations', name: 'Delete donations', category: 'Donations' },
+    { code: 'view_goals', name: 'View goals', category: 'Troop Goals & Reporting' },
+    { code: 'manage_goals', name: 'Manage goals', category: 'Troop Goals & Reporting' },
+    { code: 'view_leaderboard', name: 'View leaderboard', category: 'Troop Goals & Reporting' },
+    { code: 'manage_payment_methods', name: 'Manage payment methods', category: 'Data & Settings' },
+    { code: 'import_data', name: 'Import data', category: 'Data & Settings' },
+    { code: 'export_data', name: 'Export data', category: 'Data & Settings' },
+    { code: 'delete_own_data', name: 'Delete own data', category: 'Data & Settings' },
+];
 
-// Cookie selection table elements
-const totalBoxesInputEl = document.getElementById('totalBoxesInput');
-const totalCasesInputEl = document.getElementById('totalCasesInput');
-const orderTotalAmountEl = document.getElementById('orderTotalAmount');
+const ROLE_PRIVILEGE_DEFAULTS = {
+    member:        { view_roster:'none', manage_members:'none', manage_troop_settings:'none', send_invitations:'none', import_roster:'none', manage_member_roles:'none', manage_privileges:'none', view_scout_profiles:'S', edit_scout_level:'none', edit_scout_status:'none', award_badges:'none', view_badge_progress:'S', edit_personal_info:'none', view_events:'T', manage_events:'none', export_calendar:'T', view_sales:'S', record_sales:'S', manage_fundraisers:'none', view_troop_sales:'none', view_financials:'none', manage_financials:'none', view_donations:'S', record_donations:'S', delete_donations:'S', view_goals:'T', manage_goals:'none', view_leaderboard:'T', manage_payment_methods:'S', import_data:'none', export_data:'S', delete_own_data:'S' },
+    parent:        { view_roster:'none', manage_members:'none', manage_troop_settings:'none', send_invitations:'none', import_roster:'none', manage_member_roles:'none', manage_privileges:'none', view_scout_profiles:'H', edit_scout_level:'none', edit_scout_status:'none', award_badges:'none', view_badge_progress:'H', edit_personal_info:'H', view_events:'T', manage_events:'none', export_calendar:'T', view_sales:'H', record_sales:'H', manage_fundraisers:'none', view_troop_sales:'none', view_financials:'none', manage_financials:'none', view_donations:'H', record_donations:'H', delete_donations:'H', view_goals:'T', manage_goals:'none', view_leaderboard:'T', manage_payment_methods:'S', import_data:'none', export_data:'H', delete_own_data:'S' },
+    volunteer:     { view_roster:'T', manage_members:'none', manage_troop_settings:'none', send_invitations:'none', import_roster:'none', manage_member_roles:'none', manage_privileges:'none', view_scout_profiles:'none', edit_scout_level:'none', edit_scout_status:'none', award_badges:'none', view_badge_progress:'none', edit_personal_info:'none', view_events:'T', manage_events:'none', export_calendar:'T', view_sales:'none', record_sales:'none', manage_fundraisers:'none', view_troop_sales:'none', view_financials:'none', manage_financials:'none', view_donations:'none', record_donations:'none', delete_donations:'none', view_goals:'T', manage_goals:'none', view_leaderboard:'T', manage_payment_methods:'S', import_data:'none', export_data:'none', delete_own_data:'S' },
+    assistant:     { view_roster:'T', manage_members:'none', manage_troop_settings:'none', send_invitations:'none', import_roster:'none', manage_member_roles:'none', manage_privileges:'none', view_scout_profiles:'D', edit_scout_level:'none', edit_scout_status:'none', award_badges:'none', view_badge_progress:'D', edit_personal_info:'none', view_events:'T', manage_events:'T', export_calendar:'T', view_sales:'none', record_sales:'none', manage_fundraisers:'none', view_troop_sales:'none', view_financials:'none', manage_financials:'none', view_donations:'none', record_donations:'none', delete_donations:'none', view_goals:'T', manage_goals:'none', view_leaderboard:'T', manage_payment_methods:'S', import_data:'none', export_data:'none', delete_own_data:'S' },
+    'co-leader':   { view_roster:'T', manage_members:'T', manage_troop_settings:'T', send_invitations:'T', import_roster:'T', manage_member_roles:'none', manage_privileges:'none', view_scout_profiles:'T', edit_scout_level:'T', edit_scout_status:'T', award_badges:'T', view_badge_progress:'T', edit_personal_info:'T', view_events:'T', manage_events:'T', export_calendar:'T', view_sales:'T', record_sales:'S', manage_fundraisers:'T', view_troop_sales:'T', view_financials:'T', manage_financials:'none', view_donations:'T', record_donations:'S', delete_donations:'S', view_goals:'T', manage_goals:'T', view_leaderboard:'T', manage_payment_methods:'S', import_data:'none', export_data:'T', delete_own_data:'S' },
+    cookie_leader: { view_roster:'T', manage_members:'none', manage_troop_settings:'none', send_invitations:'none', import_roster:'none', manage_member_roles:'none', manage_privileges:'none', view_scout_profiles:'none', edit_scout_level:'none', edit_scout_status:'none', award_badges:'none', view_badge_progress:'none', edit_personal_info:'none', view_events:'T', manage_events:'none', export_calendar:'T', view_sales:'T', record_sales:'T', manage_fundraisers:'T', view_troop_sales:'T', view_financials:'T', manage_financials:'T', view_donations:'T', record_donations:'S', delete_donations:'none', view_goals:'T', manage_goals:'none', view_leaderboard:'T', manage_payment_methods:'S', import_data:'T', export_data:'T', delete_own_data:'S' },
+    troop_leader:  { view_roster:'T', manage_members:'T', manage_troop_settings:'T', send_invitations:'T', import_roster:'T', manage_member_roles:'T', manage_privileges:'T', view_scout_profiles:'T', edit_scout_level:'T', edit_scout_status:'T', award_badges:'T', view_badge_progress:'T', edit_personal_info:'T', view_events:'T', manage_events:'T', export_calendar:'T', view_sales:'T', record_sales:'T', manage_fundraisers:'T', view_troop_sales:'T', view_financials:'T', manage_financials:'T', view_donations:'T', record_donations:'T', delete_donations:'T', view_goals:'T', manage_goals:'T', view_leaderboard:'T', manage_payment_methods:'S', import_data:'T', export_data:'T', delete_own_data:'S' },
+    council_admin: { view_roster:'T', manage_members:'T', manage_troop_settings:'T', send_invitations:'T', import_roster:'T', manage_member_roles:'T', manage_privileges:'T', view_scout_profiles:'T', edit_scout_level:'T', edit_scout_status:'T', award_badges:'T', view_badge_progress:'T', edit_personal_info:'T', view_events:'T', manage_events:'T', export_calendar:'T', view_sales:'T', record_sales:'T', manage_fundraisers:'T', view_troop_sales:'T', view_financials:'T', manage_financials:'T', view_donations:'T', record_donations:'T', delete_donations:'T', view_goals:'T', manage_goals:'T', view_leaderboard:'T', manage_payment_methods:'S', import_data:'T', export_data:'T', delete_own_data:'S' },
+};
+
+const SCOPE_ORDER = ['T', 'D', 'H', 'S', 'none'];
+const SCOPE_LABELS = { T: 'Troop', D: 'Den/Patrol', H: 'Household', S: 'Self', none: 'None' };
+
+// Currently loaded privilege data for the selected member
+let currentPermsUserId = null;
+let currentPermsMemberRole = null;
+
+// DOM Elements
 
 // Profile elements
 const photoInput = document.getElementById('photoInput');
@@ -116,13 +138,6 @@ const storeQrPlaceholder = document.getElementById('storeQrPlaceholder');
 const paymentMethodsDisplay = document.getElementById('paymentMethodsDisplay');
 const paymentMethodsPlaceholder = document.getElementById('paymentMethodsPlaceholder');
 
-// Goal elements
-const goalBoxesInput = document.getElementById('goalBoxes');
-const setGoalBtn = document.getElementById('setGoalBtn');
-const goalBoxesDisplay = document.getElementById('goalBoxesDisplay');
-const goalProgress = document.getElementById('goalProgress');
-const goalProgressFill = document.getElementById('goalProgressFill');
-
 // Donation elements
 const donationForm = document.getElementById('donationForm');
 const donationAmountInput = document.getElementById('donationAmount');
@@ -135,11 +150,6 @@ const eventForm = document.getElementById('eventForm');
 const eventNameInput = document.getElementById('eventName');
 const eventDateInput = document.getElementById('eventDate');
 const eventDescriptionInput = document.getElementById('eventDescription');
-const initialBoxesInput = document.getElementById('initialBoxes');
-const initialCasesInput = document.getElementById('initialCases');
-const remainingBoxesInput = document.getElementById('remainingBoxes');
-const remainingCasesInput = document.getElementById('remainingCases');
-const eventDonationsInput = document.getElementById('eventDonations');
 const eventsList = document.getElementById('eventsList');
 
 // Initialize app
@@ -153,14 +163,10 @@ async function init() {
     // Display user info in the header (if user info element exists)
     displayUserInfo();
 
-    await Promise.all([loadSales(), loadDonations(), loadEvents(), loadProfile(), loadPaymentMethods(), loadScoutProfile()]);
-    renderSales();
+    await Promise.all([loadDonations(), loadEvents(), loadProfile(), loadPaymentMethods(), loadScoutProfile()]);
     renderDonations();
     renderCalendar();
     renderPaymentMethodsSettings();
-    updateSummary();
-    updateBreakdown();
-    updateGoalDisplay();
     setupEventListeners();
 }
 
@@ -181,13 +187,6 @@ function displayUserInfo() {
 
 // Setup event listeners
 function setupEventListeners() {
-    if (saleForm) {
-        saleForm.addEventListener('submit', handleAddSale);
-    }
-    if (clearAllButton) {
-        clearAllButton.addEventListener('click', handleClearAll);
-    }
-
     // Profile listeners
     if (uploadPhotoBtn && photoInput) {
         uploadPhotoBtn.addEventListener('click', () => photoInput.click());
@@ -196,15 +195,10 @@ function setupEventListeners() {
     if (updateQrBtn) {
         updateQrBtn.addEventListener('click', handleUpdateQrCode);
     }
-    
+
     // Payment Method listeners
     if (addPaymentMethodBtn) {
         addPaymentMethodBtn.addEventListener('click', handleAddPaymentMethod);
-    }
-
-    // Goal listeners
-    if (setGoalBtn) {
-        setGoalBtn.addEventListener('click', handleSetGoal);
     }
 
     // Donation listeners
@@ -216,21 +210,13 @@ function setupEventListeners() {
     if (eventForm) {
         eventForm.addEventListener('submit', handleAddEvent);
     }
+
+    // Calendar filter listeners
+    document.querySelectorAll('.event-filter').forEach(cb => {
+        cb.addEventListener('change', renderCalendar);
+    });
 }
 
-// Load sales from API
-async function loadSales() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/sales`);
-        await handleApiResponse(response);
-        sales = await response.json();
-    } catch (error) {
-        if (error.message === 'Authentication required') return;
-        console.error('Error loading sales:', error);
-        alert('Error loading sales data. Please refresh the page.');
-        sales = [];
-    }
-}
 
 // Load donations from API
 async function loadDonations() {
@@ -281,10 +267,6 @@ async function loadProfile() {
         // Update Settings page UI with profile data
         if (profile.qrCodeUrl) {
             qrCodeUrlInput.value = profile.qrCodeUrl;
-        }
-
-        if (profile.goalBoxes) {
-            goalBoxesInput.value = profile.goalBoxes;
         }
 
         // Update Profile tab display elements
@@ -667,247 +649,6 @@ function renderPaymentMethodsSettings() {
 }
 
 // Handle set goal
-async function handleSetGoal() {
-    const goalBoxes = parseInt(goalBoxesInput.value) || 0;
-    const goalAmount = goalBoxes * PRICE_PER_BOX;
-    
-    try {
-        const response = await fetch(`${API_BASE_URL}/profile`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ goalBoxes, goalAmount })
-        });
-        
-        if (!response.ok) {
-            throw new Error('Failed to set goal');
-        }
-        
-        await loadProfile();
-        updateGoalDisplay();
-        showFeedback('Goal updated!');
-    } catch (error) {
-        console.error('Error setting goal:', error);
-        alert('Error setting goal. Please try again.');
-    }
-}
-
-// Update goal display
-function updateGoalDisplay() {
-    if (!profile) return;
-    
-    const goalBoxes = profile.goalBoxes || 0;
-    const goalAmount = profile.goalAmount || 0;
-    
-    // Calculate total boxes (sales + donations)
-    const salesBoxes = sales.reduce((sum, sale) => sum + convertToBoxes(sale), 0);
-    const donationBoxes = donations.reduce((sum, donation) => sum + (donation.boxCount || 0), 0);
-    const totalBoxes = salesBoxes + donationBoxes;
-    
-    goalBoxesDisplay.textContent = `${goalBoxes} boxes ($${goalAmount})`;
-    
-    if (goalBoxes > 0) {
-        const progress = Math.min((totalBoxes / goalBoxes) * 100, 100);
-        goalProgress.textContent = `${progress.toFixed(1)}%`;
-        goalProgressFill.style.width = `${progress}%`;
-    } else {
-        goalProgress.textContent = '0%';
-        goalProgressFill.style.width = '0%';
-    }
-}
-
-// Handle add sale form submission
-async function handleAddSale(e) {
-    e.preventDefault();
-
-    const customerName = customerNameInput.value.trim() || 'Walk-in Customer';
-    const saleType = saleTypeInput.value;
-    const customerAddress = customerAddressInput.value.trim();
-    const customerPhone = customerPhoneInput.value.trim();
-    const amountCollected = parseFloat(amountCollectedInput.value) || 0;
-    const amountDue = parseFloat(amountDueInput.value) || 0;
-    const paymentMethod = paymentMethodInput.value;
-
-    // Collect all cookie quantities from the table
-    const qtyInputs = document.querySelectorAll('.qty-input');
-    const cookieEntries = [];
-
-    qtyInputs.forEach(input => {
-        const qty = parseInt(input.value) || 0;
-        if (qty > 0) {
-            cookieEntries.push({
-                cookieType: input.dataset.cookie,
-                quantity: qty,
-                unitType: input.dataset.unit
-            });
-        }
-    });
-
-    if (cookieEntries.length === 0) {
-        alert('Please enter at least one cookie quantity.');
-        return;
-    }
-
-    // Generate a unique order number for this batch
-    const orderNumber = `MAN-${Date.now()}`;
-    const saleDate = new Date().toISOString();
-
-    try {
-        // Create a sale record for each cookie entry
-        const salePromises = cookieEntries.map(entry => {
-            const sale = {
-                cookieType: entry.cookieType,
-                quantity: entry.quantity,
-                customerName,
-                saleType,
-                customerAddress,
-                customerPhone,
-                unitType: entry.unitType,
-                amountCollected: 0, // Will set on first entry only
-                amountDue: 0,
-                paymentMethod,
-                orderNumber,
-                orderType: 'Manual',
-                date: saleDate
-            };
-            return sale;
-        });
-
-        // Set payment info on first entry only (to avoid duplicate counting)
-        if (salePromises.length > 0) {
-            salePromises[0].amountCollected = amountCollected;
-            salePromises[0].amountDue = amountDue;
-        }
-
-        // Submit all sales
-        for (const sale of salePromises) {
-            const response = await fetch(`${API_BASE_URL}/sales`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(sale)
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to add sale');
-            }
-        }
-
-        await loadSales();
-        renderSales();
-        updateSummary();
-        updateBreakdown();
-        updateGoalDisplay();
-
-        // Reset form
-        saleForm.reset();
-        resetCookieTable();
-
-        // Show feedback
-        showFeedback(`Order added with ${cookieEntries.length} cookie type(s)!`);
-    } catch (error) {
-        console.error('Error adding sale:', error);
-        alert('Error adding sale. Please try again.');
-    }
-}
-
-// Reset cookie selection table
-function resetCookieTable() {
-    const qtyInputs = document.querySelectorAll('.qty-input');
-    qtyInputs.forEach(input => {
-        input.value = '';
-    });
-    updateCookieTableTotals();
-}
-
-// Update cookie table totals
-function updateCookieTableTotals() {
-    const qtyInputs = document.querySelectorAll('.qty-input');
-    let totalBoxes = 0;
-    let totalCases = 0;
-
-    qtyInputs.forEach(input => {
-        const qty = parseInt(input.value) || 0;
-        if (input.dataset.unit === 'box') {
-            totalBoxes += qty;
-        } else if (input.dataset.unit === 'case') {
-            totalCases += qty;
-        }
-    });
-
-    // Calculate total boxes (including cases converted)
-    const totalBoxesAll = totalBoxes + (totalCases * BOXES_PER_CASE);
-    const totalAmount = totalBoxesAll * PRICE_PER_BOX;
-
-    if (totalBoxesInputEl) totalBoxesInputEl.textContent = totalBoxes;
-    if (totalCasesInputEl) totalCasesInputEl.textContent = totalCases;
-    if (orderTotalAmountEl) orderTotalAmountEl.textContent = `$${totalAmount.toFixed(2)}`;
-}
-
-// Setup cookie table event listeners
-function setupCookieTableListeners() {
-    const qtyInputs = document.querySelectorAll('.qty-input');
-    qtyInputs.forEach(input => {
-        input.addEventListener('input', updateCookieTableTotals);
-        input.addEventListener('change', updateCookieTableTotals);
-    });
-}
-
-// Handle delete sale
-async function handleDeleteSale(id) {
-    if (confirm('Are you sure you want to delete this sale?')) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/sales/${id}`, {
-                method: 'DELETE'
-            });
-            
-            if (!response.ok) {
-                throw new Error('Failed to delete sale');
-            }
-            
-            await loadSales();
-            renderSales();
-            updateSummary();
-            updateBreakdown();
-            updateGoalDisplay();
-            showFeedback('Sale deleted.');
-        } catch (error) {
-            console.error('Error deleting sale:', error);
-            alert('Error deleting sale. Please try again.');
-        }
-    }
-}
-
-// Handle clear all sales
-async function handleClearAll() {
-    if (sales.length === 0) {
-        alert('No sales to clear.');
-        return;
-    }
-    
-    if (confirm('Are you sure you want to clear all sales? This cannot be undone.')) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/sales`, {
-                method: 'DELETE'
-            });
-            
-            if (!response.ok) {
-                throw new Error('Failed to clear sales');
-            }
-            
-            await loadSales();
-            renderSales();
-            updateSummary();
-            updateBreakdown();
-            updateGoalDisplay();
-            showFeedback('All sales cleared.');
-        } catch (error) {
-            console.error('Error clearing sales:', error);
-            alert('Error clearing sales. Please try again.');
-        }
-    }
-}
-
 // Handle add donation
 async function handleAddDonation(e) {
     e.preventDefault();
@@ -939,7 +680,7 @@ async function handleAddDonation(e) {
         
         await loadDonations();
         renderDonations();
-        updateSummary();
+
         
         // Reset form
         donationForm.reset();
@@ -965,7 +706,7 @@ async function handleDeleteDonation(id) {
             
             await loadDonations();
             renderDonations();
-            updateSummary();
+    
             showFeedback('Donation deleted.');
         } catch (error) {
             console.error('Error deleting donation:', error);
@@ -1036,7 +777,7 @@ async function handleAddEvent(e) {
         
         await loadEvents();
         renderCalendar(); // Use new render function
-        updateSummary();
+
         
         // Reset form and editing state
         resetEventForm();
@@ -1072,19 +813,15 @@ function handleEditEvent(id) {
     
     // Populate form
     eventNameInput.value = event.eventName;
-    // Format date for datetime-local input (YYYY-MM-DDThh:mm)
-    const date = new Date(event.eventDate);
-    // Adjust for local timezone offset to ensure correct display
-    const tzOffset = date.getTimezoneOffset() * 60000;
-    const localISOTime = (new Date(date - tzOffset)).toISOString().slice(0, 16);
-    eventDateInput.value = localISOTime;
-    
+    // Extract YYYY-MM-DD from the date string for the date input
+    eventDateInput.value = event.eventDate ? event.eventDate.split('T')[0] : '';
+
     eventDescriptionInput.value = event.description || '';
-    initialBoxesInput.value = event.initialBoxes;
-    initialCasesInput.value = event.initialCases;
-    remainingBoxesInput.value = event.remainingBoxes;
-    remainingCasesInput.value = event.remainingCases;
-    eventDonationsInput.value = event.donationsReceived;
+    document.getElementById('eventType').value = event.eventType || 'event';
+    document.getElementById('eventStartTime').value = event.startTime || '';
+    document.getElementById('eventEndTime').value = event.endTime || '';
+    document.getElementById('eventLocation').value = event.location || '';
+    document.getElementById('targetGroup').value = event.targetGroup || 'Troop';
     
     // Change submit button text
     const submitBtn = eventForm.querySelector('button[type="submit"]');
@@ -1120,7 +857,7 @@ async function handleDeleteEvent(id) {
             
             await loadEvents();
             renderCalendar();
-            updateSummary();
+    
             showFeedback('Event deleted.');
         } catch (error) {
             console.error('Error deleting event:', error);
@@ -1175,13 +912,9 @@ function renderCalendar() {
         
         const dayEvents = events.filter(e => {
             if (!e.eventDate) return false;
-            // Handle both ISO strings and potentially other formats if any
-            const eDate = new Date(e.eventDate); 
-            // Correct for timezone issues if date is stored as UTC but meant to be local date?
-            // "2026-02-10T00:00:00.000Z" -> Date object will be local.
-            // If the user entered "2026-02-10" in input type="date", it saves as YYYY-MM-DD.
-            // Let's assume standard local date matching.
-            return eDate.getDate() === i && eDate.getMonth() === month && eDate.getFullYear() === year;
+            // Parse date string directly to avoid timezone shifts
+            const [eYear, eMonth, eDay] = e.eventDate.split('T')[0].split('-').map(Number);
+            return eDay === i && (eMonth - 1) === month && eYear === year;
         });
         
         dayEvents.forEach(event => {
@@ -1249,642 +982,6 @@ async function exportCalendar() {
     window.location.href = `${API_BASE_URL}/troop/${currentUser.troopId}/calendar/export`;
 }
 
-// Helper to generate a unique key for grouping sales into an order
-function getOrderKey(sale) {
-    // Use orderNumber if available, otherwise group by customer name + date
-    if (sale.orderNumber) {
-        return `order_${sale.orderNumber}`;
-    }
-    // Fallback: group by customer name and date (same day)
-    const dateStr = new Date(sale.date).toISOString().split('T')[0];
-    return `manual_${sale.customerName}_${dateStr}`;
-}
-
-// Render sales list grouped by customer/order
-function renderSales() {
-    // Filter to individual sales only
-    const individualSales = sales.filter(s => s.saleType === 'individual');
-
-    if (individualSales.length === 0) {
-        salesList.innerHTML = '<p class="empty-message">No sales recorded yet. Add your first sale above!</p>';
-        return;
-    }
-
-    // Group sales by order
-    const orders = {};
-    individualSales.forEach(sale => {
-        const key = getOrderKey(sale);
-        if (!orders[key]) {
-            orders[key] = {
-                key: key,
-                customerName: sale.customerName || 'Walk-in Customer',
-                date: sale.date,
-                orderType: sale.orderType || 'Manual',
-                orderStatus: sale.orderStatus || 'Pending',
-                items: [],
-                totalBoxes: 0,
-                totalDue: 0,
-                totalCollected: 0
-            };
-        }
-        orders[key].items.push(sale);
-        orders[key].totalBoxes += convertToBoxes(sale);
-        orders[key].totalDue += sale.amountDue || 0;
-        orders[key].totalCollected += sale.amountCollected || 0;
-
-        // If any item has Shipped status, mark the whole order as shipped
-        if (sale.orderType && sale.orderType.toLowerCase().includes('shipped')) {
-            orders[key].orderStatus = 'Shipped';
-        }
-        if (sale.orderStatus === 'Shipped' || sale.orderStatus === 'Delivered') {
-            orders[key].orderStatus = sale.orderStatus;
-        }
-    });
-
-    // Sort orders by date (newest first)
-    const sortedOrders = Object.values(orders).sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    // Build table HTML
-    let html = `
-        <div class="sales-table-container">
-            <table class="sales-table">
-                <thead>
-                    <tr>
-                        <th>Customer Name</th>
-                        <th>Total Boxes</th>
-                        <th>Order Date</th>
-                        <th>Order Type</th>
-                        <th>Order Complete</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
-
-    sortedOrders.forEach(order => {
-        const date = new Date(order.date);
-        const formattedDate = date.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        });
-
-        // Check if order is shipped or delivered
-        const isShipped = order.orderType && order.orderType.toLowerCase().includes('shipped');
-        const isInPerson = order.orderType && order.orderType.toLowerCase().includes('in-person');
-        const isComplete = order.orderStatus === 'Shipped' || order.orderStatus === 'Delivered' || isShipped;
-        const hasOutstandingPayment = order.totalDue > 0;
-
-        // Determine status class for row coloring
-        // Priority: Awaiting Payment (red) > Complete (green) > Shipped (yellow) > In-Person (blue)
-        let statusClass = '';
-        if (hasOutstandingPayment && !isComplete) {
-            statusClass = 'status-awaiting-payment';
-        } else if (isComplete) {
-            statusClass = 'status-complete';
-        } else if (isShipped) {
-            statusClass = 'status-shipped';
-        } else if (isInPerson) {
-            statusClass = 'status-in-person';
-        }
-
-        // Determine button text and state
-        const buttonText = isComplete ? 'Completed' : 'Mark Complete';
-        const buttonClass = isComplete ? 'btn-complete-done' : 'btn-complete';
-        const buttonDisabled = isShipped ? 'disabled title="Shipped orders are automatically complete"' : '';
-
-        html += `
-            <tr class="${statusClass}" data-order-key="${order.key}">
-                <td class="customer-name">
-                    <a href="#" onclick="showOrderDetails('${order.key}'); return false;">${order.customerName}</a>
-                </td>
-                <td>${order.totalBoxes}</td>
-                <td>${formattedDate}</td>
-                <td>${order.orderType}</td>
-                <td>
-                    <button class="btn-order-status ${buttonClass}"
-                        ${buttonDisabled}
-                        onclick="handleOrderComplete('${order.key}', ${!isComplete})">
-                        ${buttonText}
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
-
-    html += `
-                </tbody>
-            </table>
-        </div>
-        <div class="status-legend">
-            <span class="legend-item"><span class="legend-color status-complete"></span> Complete</span>
-            <span class="legend-item"><span class="legend-color status-shipped"></span> Shipped</span>
-            <span class="legend-item"><span class="legend-color status-in-person"></span> In-Person</span>
-            <span class="legend-item"><span class="legend-color status-awaiting-payment"></span> Awaiting Payment</span>
-        </div>
-    `;
-
-    salesList.innerHTML = html;
-}
-
-// Show order details when clicking on customer name
-function showOrderDetails(orderKey) {
-    // Find all sales for this order
-    const orderSales = sales.filter(s => getOrderKey(s) === orderKey);
-
-    if (orderSales.length === 0) return;
-
-    const firstSale = orderSales[0];
-    const totalBoxes = orderSales.reduce((sum, s) => sum + convertToBoxes(s), 0);
-
-    // Calculate payment totals
-    const totalCollected = orderSales.reduce((sum, s) => sum + parseFloat(s.amountCollected || 0), 0);
-    const totalDue = orderSales.reduce((sum, s) => sum + parseFloat(s.amountDue || 0), 0);
-    const orderTotal = totalBoxes * PRICE_PER_BOX;
-    const remainingBalance = orderTotal - totalCollected;
-
-    // Group cookies by type
-    const cookieBreakdown = {};
-    orderSales.forEach(sale => {
-        const boxes = convertToBoxes(sale);
-        if (cookieBreakdown[sale.cookieType]) {
-            cookieBreakdown[sale.cookieType] += boxes;
-        } else {
-            cookieBreakdown[sale.cookieType] = boxes;
-        }
-    });
-
-    // Build cookie list HTML
-    let cookieListHtml = '';
-    Object.entries(cookieBreakdown).forEach(([cookieType, qty]) => {
-        cookieListHtml += `<tr><td>${cookieType}</td><td>${qty}</td></tr>`;
-    });
-
-    // Show details in a modal-like section
-    const detailsHtml = `
-        <div class="order-details-overlay" onclick="closeOrderDetails()">
-            <div class="order-details-modal" onclick="event.stopPropagation()">
-                <div class="order-details-header">
-                    <h3>Order Details</h3>
-                    <button class="btn-close" onclick="closeOrderDetails()">&times;</button>
-                </div>
-                <div class="order-details-content">
-                    <div class="detail-section">
-                        <h4>Customer Information</h4>
-                        <p><strong>Name:</strong> ${firstSale.customerName || 'N/A'}</p>
-                        <p><strong>Address:</strong> ${firstSale.customerAddress || 'N/A'}</p>
-                        <p><strong>Phone:</strong> ${firstSale.customerPhone || 'N/A'}</p>
-                        ${firstSale.customerEmail ? `<p><strong>Email:</strong> ${firstSale.customerEmail}</p>` : ''}
-                    </div>
-                    <div class="detail-section">
-                        <h4>Order Information</h4>
-                        <p><strong>Order Type:</strong> ${firstSale.orderType || 'Manual'}</p>
-                        <p><strong>Status:</strong> ${firstSale.orderStatus || 'Pending'}</p>
-                        <p><strong>Payment Method:</strong> ${firstSale.paymentMethod || 'N/A'}</p>
-                        ${firstSale.orderNumber ? `<p><strong>Order #:</strong> ${firstSale.orderNumber}</p>` : ''}
-                    </div>
-                    <div class="detail-section">
-                        <h4>Cookies Ordered (${totalBoxes} boxes total)</h4>
-                        <table class="cookie-detail-table">
-                            <thead>
-                                <tr><th>Cookie Type</th><th>Boxes</th></tr>
-                            </thead>
-                            <tbody>
-                                ${cookieListHtml}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="detail-section">
-                        <h4>Payment</h4>
-                        <div class="payment-summary">
-                            <div class="payment-row">
-                                <span>Order Total:</span>
-                                <span class="payment-value">$${orderTotal.toFixed(2)}</span>
-                            </div>
-                            <div class="payment-row">
-                                <span>Payment Received:</span>
-                                <span class="payment-value payment-received">$${totalCollected.toFixed(2)}</span>
-                            </div>
-                            <div class="payment-row ${remainingBalance > 0 ? 'payment-due-highlight' : ''}">
-                                <span>Balance Due:</span>
-                                <span class="payment-value payment-due">$${remainingBalance.toFixed(2)}</span>
-                            </div>
-                        </div>
-                        <div class="additional-payment-section">
-                            <label for="additionalPayment">Add Payment Collected:</label>
-                            <div class="additional-payment-input">
-                                <span class="currency-prefix">$</span>
-                                <input type="number" id="additionalPayment" min="0" step="0.01" value="0" placeholder="0.00">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="detail-actions">
-                        ${isManualOrder(firstSale) ? `<button class="btn btn-secondary" onclick="showEditOrderForm('${orderKey}')">Edit Order</button>` : ''}
-                        <button class="btn btn-secondary btn-danger-text" onclick="deleteOrder('${orderKey}')">Delete Order</button>
-                        <button class="btn btn-primary" onclick="saveOrderPayment('${orderKey}')">Save Changes</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    // Append to body
-    const detailsDiv = document.createElement('div');
-    detailsDiv.id = 'orderDetailsContainer';
-    detailsDiv.innerHTML = detailsHtml;
-    document.body.appendChild(detailsDiv);
-}
-
-// Check if order is a manual order (not from Digital Cookie scrape)
-function isManualOrder(sale) {
-    // Scraped orders have orderType like "Website", "Shipped", "In-Person delivery"
-    // and typically have an orderNumber from Digital Cookie
-    const scrapedOrderTypes = ['website', 'shipped', 'in-person delivery', 'in-person'];
-    const orderType = (sale.orderType || '').toLowerCase();
-
-    // If it has a Digital Cookie style order number (8+ digits), it's scraped
-    const hasScrapedOrderNumber = sale.orderNumber && /^\d{8,}$/.test(sale.orderNumber);
-
-    // It's manual if: no orderType, orderType is 'Manual', or doesn't match scraped patterns
-    const isManual = !orderType || orderType === 'manual' ||
-        (!scrapedOrderTypes.some(t => orderType.includes(t)) && !hasScrapedOrderNumber);
-
-    return isManual;
-}
-
-// Show edit order form
-function showEditOrderForm(orderKey) {
-    const orderSales = sales.filter(s => getOrderKey(s) === orderKey);
-    if (orderSales.length === 0) return;
-
-    const firstSale = orderSales[0];
-
-    // Build cookie entries for editing
-    const cookieEntries = {};
-    orderSales.forEach(sale => {
-        const boxes = convertToBoxes(sale);
-        cookieEntries[sale.cookieType] = {
-            quantity: boxes,
-            saleId: sale.id
-        };
-    });
-
-    // Build cookie edit rows
-    let cookieEditHtml = '';
-    Object.entries(cookieEntries).forEach(([cookieType, data]) => {
-        cookieEditHtml += `
-            <div class="edit-cookie-row" data-sale-id="${data.saleId}">
-                <span class="edit-cookie-name">${cookieType}</span>
-                <input type="number" class="edit-cookie-qty" value="${data.quantity}" min="0" data-original="${data.quantity}">
-                <button class="btn-remove-cookie" onclick="markCookieForRemoval(this)" title="Remove">&times;</button>
-            </div>
-        `;
-    });
-
-    const editFormHtml = `
-        <div class="order-details-overlay" onclick="closeEditOrderForm()">
-            <div class="order-details-modal edit-order-modal" onclick="event.stopPropagation()">
-                <div class="order-details-header">
-                    <h3>Edit Order</h3>
-                    <button class="btn-close" onclick="closeEditOrderForm()">&times;</button>
-                </div>
-                <div class="order-details-content">
-                    <div class="detail-section">
-                        <h4>Customer Information</h4>
-                        <div class="form-group">
-                            <label>Name</label>
-                            <input type="text" id="editCustomerName" value="${firstSale.customerName || ''}" placeholder="Customer Name">
-                        </div>
-                        <div class="form-group">
-                            <label>Address</label>
-                            <input type="text" id="editCustomerAddress" value="${firstSale.customerAddress || ''}" placeholder="Address">
-                        </div>
-                        <div class="form-group">
-                            <label>Phone</label>
-                            <input type="tel" id="editCustomerPhone" value="${firstSale.customerPhone || ''}" placeholder="Phone">
-                        </div>
-                        <div class="form-group">
-                            <label>Email</label>
-                            <input type="email" id="editCustomerEmail" value="${firstSale.customerEmail || ''}" placeholder="Email">
-                        </div>
-                    </div>
-                    <div class="detail-section">
-                        <h4>Order Information</h4>
-                        <div class="form-group">
-                            <label>Order Status</label>
-                            <select id="editOrderStatus">
-                                <option value="Pending" ${firstSale.orderStatus === 'Pending' ? 'selected' : ''}>Pending</option>
-                                <option value="Delivered" ${firstSale.orderStatus === 'Delivered' ? 'selected' : ''}>Delivered</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Payment Method</label>
-                            <select id="editPaymentMethod">
-                                <option value="" ${!firstSale.paymentMethod ? 'selected' : ''}>Not specified</option>
-                                <option value="cash" ${firstSale.paymentMethod === 'cash' ? 'selected' : ''}>Cash</option>
-                                <option value="check" ${firstSale.paymentMethod === 'check' ? 'selected' : ''}>Check</option>
-                                <option value="venmo" ${firstSale.paymentMethod === 'venmo' ? 'selected' : ''}>Venmo</option>
-                                <option value="paypal" ${firstSale.paymentMethod === 'paypal' ? 'selected' : ''}>PayPal</option>
-                                <option value="online" ${firstSale.paymentMethod === 'online' ? 'selected' : ''}>Online</option>
-                                <option value="other" ${firstSale.paymentMethod === 'other' ? 'selected' : ''}>Other</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="detail-section">
-                        <h4>Cookies</h4>
-                        <div class="edit-cookies-list" id="editCookiesList">
-                            ${cookieEditHtml}
-                        </div>
-                        <p class="edit-note">Set quantity to 0 or click &times; to remove a cookie type.</p>
-                    </div>
-                    <div class="detail-section">
-                        <h4>Payment</h4>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Amount Collected</label>
-                                <input type="number" id="editAmountCollected" value="${orderSales.reduce((sum, s) => sum + parseFloat(s.amountCollected || 0), 0).toFixed(2)}" min="0" step="0.01">
-                            </div>
-                            <div class="form-group">
-                                <label>Amount Due</label>
-                                <input type="number" id="editAmountDue" value="${orderSales.reduce((sum, s) => sum + parseFloat(s.amountDue || 0), 0).toFixed(2)}" min="0" step="0.01">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="detail-actions">
-                        <button class="btn btn-secondary" onclick="closeEditOrderForm()">Cancel</button>
-                        <button class="btn btn-primary" onclick="saveOrderEdits('${orderKey}')">Save Changes</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    // Close current order details and show edit form
-    closeOrderDetails();
-
-    const editDiv = document.createElement('div');
-    editDiv.id = 'editOrderContainer';
-    editDiv.innerHTML = editFormHtml;
-    document.body.appendChild(editDiv);
-}
-
-// Mark cookie row for removal
-function markCookieForRemoval(button) {
-    const row = button.closest('.edit-cookie-row');
-    row.classList.toggle('marked-for-removal');
-    if (row.classList.contains('marked-for-removal')) {
-        row.querySelector('.edit-cookie-qty').value = 0;
-    }
-}
-
-// Close edit order form
-function closeEditOrderForm() {
-    const container = document.getElementById('editOrderContainer');
-    if (container) {
-        container.remove();
-    }
-}
-
-// Save order edits
-async function saveOrderEdits(orderKey) {
-    const orderSales = sales.filter(s => getOrderKey(s) === orderKey);
-    if (orderSales.length === 0) return;
-
-    // Gather form values
-    const customerName = document.getElementById('editCustomerName').value.trim();
-    const customerAddress = document.getElementById('editCustomerAddress').value.trim();
-    const customerPhone = document.getElementById('editCustomerPhone').value.trim();
-    const customerEmail = document.getElementById('editCustomerEmail').value.trim();
-    const orderStatus = document.getElementById('editOrderStatus').value;
-    const paymentMethod = document.getElementById('editPaymentMethod').value;
-    const amountCollected = parseFloat(document.getElementById('editAmountCollected').value) || 0;
-    const amountDue = parseFloat(document.getElementById('editAmountDue').value) || 0;
-
-    // Get cookie quantities
-    const cookieRows = document.querySelectorAll('.edit-cookie-row');
-    const cookieUpdates = [];
-    cookieRows.forEach(row => {
-        const saleId = row.dataset.saleId;
-        const qty = parseInt(row.querySelector('.edit-cookie-qty').value) || 0;
-        const isRemoved = row.classList.contains('marked-for-removal') || qty === 0;
-        cookieUpdates.push({ saleId, qty, isRemoved });
-    });
-
-    try {
-        // Update each sale in the order
-        const updatePromises = [];
-
-        // First sale gets the payment amounts
-        const firstSaleId = orderSales[0].id;
-
-        for (let i = 0; i < orderSales.length; i++) {
-            const sale = orderSales[i];
-            const cookieUpdate = cookieUpdates.find(u => u.saleId == sale.id);
-
-            if (cookieUpdate && cookieUpdate.isRemoved) {
-                // Delete this sale entry
-                updatePromises.push(
-                    fetch(`${API_BASE_URL}/sales/${sale.id}`, { method: 'DELETE' })
-                );
-            } else {
-                // Update this sale entry
-                const updateData = {
-                    customerName,
-                    customerAddress,
-                    customerPhone,
-                    customerEmail,
-                    orderStatus,
-                    paymentMethod: paymentMethod || null
-                };
-
-                // Update quantity if changed
-                if (cookieUpdate) {
-                    updateData.quantity = cookieUpdate.qty;
-                }
-
-                // First sale gets payment amounts
-                if (sale.id === firstSaleId) {
-                    updateData.amountCollected = amountCollected;
-                    updateData.amountDue = amountDue;
-                }
-
-                updatePromises.push(
-                    fetch(`${API_BASE_URL}/sales/${sale.id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(updateData)
-                    })
-                );
-            }
-        }
-
-        await Promise.all(updatePromises);
-
-        // Reload and re-render
-        await loadSales();
-        renderSales();
-        closeEditOrderForm();
-        showFeedback('Order updated successfully!');
-    } catch (error) {
-        console.error('Error saving order edits:', error);
-        alert('Failed to save changes. Please try again.');
-    }
-}
-
-// Save order payment changes
-async function saveOrderPayment(orderKey) {
-    const additionalPaymentInput = document.getElementById('additionalPayment');
-    const additionalPayment = parseFloat(additionalPaymentInput.value) || 0;
-
-    if (additionalPayment <= 0) {
-        showFeedback('No additional payment to save');
-        closeOrderDetails();
-        return;
-    }
-
-    const orderSales = sales.filter(s => getOrderKey(s) === orderKey);
-    if (orderSales.length === 0) return;
-
-    // Add the additional payment to the first sale in the order
-    const firstSale = orderSales[0];
-    const newAmountCollected = (firstSale.amountCollected || 0) + additionalPayment;
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/sales/${firstSale.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ amountCollected: newAmountCollected })
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to update payment');
-        }
-
-        // Reload and re-render
-        await loadSales();
-        renderSales();
-        closeOrderDetails();
-        showFeedback(`Payment of $${additionalPayment.toFixed(2)} recorded!`);
-    } catch (error) {
-        console.error('Error saving payment:', error);
-        alert('Failed to save payment. Please try again.');
-    }
-}
-
-// Close order details modal
-function closeOrderDetails() {
-    const container = document.getElementById('orderDetailsContainer');
-    if (container) {
-        container.remove();
-    }
-}
-
-// Handle order complete checkbox change
-async function handleOrderComplete(orderKey, markAsComplete) {
-    const orderSales = sales.filter(s => getOrderKey(s) === orderKey);
-    const newStatus = markAsComplete ? 'Delivered' : 'Pending';
-
-    // Calculate payment totals
-    const totalBoxes = orderSales.reduce((sum, s) => sum + convertToBoxes(s), 0);
-    const orderTotal = totalBoxes * PRICE_PER_BOX;
-    const totalCollected = orderSales.reduce((sum, s) => sum + (s.amountCollected || 0), 0);
-    const remainingBalance = orderTotal - totalCollected;
-
-    // If marking as complete and there's still payment due, show confirmation
-    if (markAsComplete && remainingBalance > 0) {
-        const shouldUpdatePayment = confirm(
-            `There is payment still due on this order ($${remainingBalance.toFixed(2)}). Do you want to update total due to $0, and payment received to $${orderTotal.toFixed(2)}?`
-        );
-
-        if (!shouldUpdatePayment) {
-            // User clicked "No" - return to sales page without marking complete
-            return;
-        }
-
-        // User clicked "Yes" - update payment first
-        try {
-            const firstSale = orderSales[0];
-            const response = await fetch(`${API_BASE_URL}/sales/${firstSale.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ amountCollected: orderTotal })
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to update payment');
-            }
-
-            // Reload sales to get updated payment data
-            await loadSales();
-        } catch (error) {
-            console.error('Error updating payment:', error);
-            alert('Failed to update payment. Please try again.');
-            return;
-        }
-    }
-
-    // Find and disable the button while processing
-    const row = document.querySelector(`tr[data-order-key="${orderKey}"]`);
-    const button = row?.querySelector('.btn-order-status');
-    if (button) {
-        button.disabled = true;
-        button.textContent = 'Updating...';
-    }
-
-    try {
-        // Update all sales in this order
-        const updatePromises = orderSales.map(sale =>
-            fetch(`${API_BASE_URL}/sales/${sale.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderStatus: newStatus })
-            })
-        );
-
-        await Promise.all(updatePromises);
-
-        // Reload and re-render
-        await loadSales();
-        renderSales();
-        showFeedback(`Order marked as ${newStatus}`);
-    } catch (error) {
-        console.error('Error updating order status:', error);
-        alert('Failed to update order status. Please try again.');
-        // Reload to reset button state
-        await loadSales();
-        renderSales();
-    }
-}
-
-// Delete an entire order
-async function deleteOrder(orderKey) {
-    if (!confirm('Are you sure you want to delete this entire order?')) {
-        return;
-    }
-
-    const orderSales = sales.filter(s => getOrderKey(s) === orderKey);
-
-    try {
-        const deletePromises = orderSales.map(sale =>
-            fetch(`${API_BASE_URL}/sales/${sale.id}`, {
-                method: 'DELETE'
-            })
-        );
-
-        await Promise.all(deletePromises);
-
-        closeOrderDetails();
-        await loadSales();
-        renderSales();
-        updateSummary();
-        updateBreakdown();
-        updateGoalDisplay();
-        showFeedback('Order deleted successfully');
-    } catch (error) {
-        console.error('Error deleting order:', error);
-        alert('Failed to delete order. Please try again.');
-    }
-}
-
 // Render donations list
 function renderDonations() {
     if (!donationsList) return;
@@ -1916,62 +1013,6 @@ function renderDonations() {
             </div>
         `;
     }).join('');
-}
-
-// Update summary statistics
-function updateSummary() {
-    // Calculate sales boxes (converting cases to boxes where needed)
-    const salesBoxes = sales.reduce((sum, sale) => sum + convertToBoxes(sale), 0);
-    
-    // Calculate donation boxes (Cookie Share)
-    const donationBoxes = donations.reduce((sum, donation) => sum + (donation.boxCount || 0), 0);
-    
-    const totalBoxes = salesBoxes + donationBoxes;
-    
-    const individualBoxes = sales.filter(s => s.saleType === 'individual').reduce((sum, sale) => sum + convertToBoxes(sale), 0);
-    const eventBoxes = sales.filter(s => s.saleType === 'event').reduce((sum, sale) => sum + convertToBoxes(sale), 0);
-    
-    const salesRevenue = salesBoxes * PRICE_PER_BOX;
-    const totalDonationAmount = donations.reduce((sum, donation) => sum + parseFloat(donation.amount || 0), 0);
-    
-    const totalRevenue = salesRevenue + totalDonationAmount;
-    
-    totalBoxesElement.textContent = totalBoxes;
-    // Update labels to be more clear if needed, or just keep as is
-    individualSalesElement.textContent = `${individualBoxes} boxes`;
-    eventSalesElement.textContent = `${eventBoxes} boxes`;
-    
-    totalRevenueElement.textContent = `$${totalRevenue.toFixed(2)}`;
-}
-
-// Update cookie breakdown
-function updateBreakdown() {
-    if (sales.length === 0) {
-        cookieBreakdownElement.innerHTML = '<p class="empty-message">No data to display yet.</p>';
-        return;
-    }
-    
-    // Calculate totals by cookie type (converting cases to boxes)
-    const breakdown = {};
-    sales.forEach(sale => {
-        const boxes = convertToBoxes(sale);
-        if (breakdown[sale.cookieType]) {
-            breakdown[sale.cookieType] += boxes;
-        } else {
-            breakdown[sale.cookieType] = boxes;
-        }
-    });
-    
-    // Sort by quantity (descending)
-    const sortedBreakdown = Object.entries(breakdown)
-        .sort((a, b) => b[1] - a[1]);
-    
-    cookieBreakdownElement.innerHTML = sortedBreakdown.map(([cookieType, quantity]) => `
-        <div class="breakdown-item">
-            <span class="breakdown-cookie">${cookieType}</span>
-            <span class="breakdown-quantity">${quantity} box${quantity > 1 ? 'es' : ''}</span>
-        </div>
-    `).join('');
 }
 
 // Show feedback message (simple toast-like notification)
@@ -2074,8 +1115,11 @@ function setupNavigation() {
         });
     });
 
-    // Load last view or default to profile
+    // Load last view or default to profile (fallback removed views)
     let lastView = localStorage.getItem('lastView') || 'profile';
+    if (lastView === 'dashboard' || lastView === 'sales') {
+        lastView = 'profile';
+    }
     switchView(lastView);
 }
 
@@ -2273,13 +1317,6 @@ function setupImport() {
             importStatus.className = 'import-status success';
             importStatus.textContent = `Successfully imported ${result.salesImported} sales from ${result.ordersProcessed} orders`;
 
-            // Reload sales data
-            await loadSales();
-            renderSales();
-            updateSummary();
-            updateBreakdown();
-            updateGoalDisplay();
-
             showFeedback('Import successful!');
 
             // Reset file input
@@ -2328,11 +1365,7 @@ function setupDangerZone() {
                 if (response.ok) {
                     const result = await response.json();
                     showFeedback(`Deleted ${result.salesDeleted} sales and ${result.donationsDeleted} donations`);
-                    await loadSales();
                     await loadDonations();
-                    updateSummary();
-                    updateBreakdown();
-                    updateGoalDisplay();
                 } else {
                     showFeedback('Failed to delete data', true);
                 }
@@ -2412,6 +1445,20 @@ function setupTroopManagement() {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => searchUsers(e.target.value), 300);
         });
+    }
+
+    // Permissions tab listeners
+    const permsMemberSelect = document.getElementById('permsMemberSelect');
+    if (permsMemberSelect) {
+        permsMemberSelect.addEventListener('change', loadMemberPrivileges);
+    }
+    const savePermsBtn = document.getElementById('savePermsBtn');
+    if (savePermsBtn) {
+        savePermsBtn.addEventListener('click', savePrivilegeOverrides);
+    }
+    const resetPermsBtn = document.getElementById('resetPermsBtn');
+    if (resetPermsBtn) {
+        resetPermsBtn.addEventListener('click', resetPrivilegesToDefaults);
     }
 
     // Load troops on init
@@ -2513,6 +1560,9 @@ function renderTroopDashboard() {
 
     // Render sales by cookie
     renderTroopSalesByCookie();
+
+    // Populate permissions member dropdown
+    populatePermsMemberDropdown();
 }
 
 // Show empty state when no troop selected
@@ -2730,6 +1780,186 @@ function renderTroopSalesByCookie() {
             <span class="cookie-revenue">$${parseFloat(item.totalCollected || 0).toFixed(2)}</span>
         </div>
     `).join('');
+}
+
+// ============================================================================
+// Privilege Management Functions
+// ============================================================================
+
+function populatePermsMemberDropdown() {
+    const select = document.getElementById('permsMemberSelect');
+    if (!select) return;
+
+    const currentValue = select.value;
+    select.innerHTML = '<option value="">Choose a member...</option>';
+
+    if (!troopMembers || troopMembers.length === 0) return;
+
+    // Filter out the current user (no self-modification)
+    const members = troopMembers.filter(m => m.id !== currentUser?.id && m.status !== 'inactive');
+    members.sort((a, b) => {
+        const nameA = `${a.lastName || ''}, ${a.firstName || ''}`.toLowerCase();
+        const nameB = `${b.lastName || ''}, ${b.firstName || ''}`.toLowerCase();
+        return nameA.localeCompare(nameB);
+    });
+
+    for (const m of members) {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        const role = m.troopRole || m.role || 'member';
+        opt.textContent = `${m.lastName || ''}, ${m.firstName || ''} (${role})`;
+        select.appendChild(opt);
+    }
+
+    // Restore selection if still valid
+    if (currentValue && members.some(m => m.id === currentValue)) {
+        select.value = currentValue;
+    }
+}
+
+async function loadMemberPrivileges() {
+    const select = document.getElementById('permsMemberSelect');
+    const userId = select ? select.value : '';
+    const container = document.getElementById('permsMatrixContainer');
+    const emptyState = document.getElementById('permsEmptyState');
+
+    if (!userId) {
+        if (container) container.style.display = 'none';
+        if (emptyState) emptyState.style.display = '';
+        currentPermsUserId = null;
+        currentPermsMemberRole = null;
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/troop/${selectedTroopId}/members/${userId}/privileges`, {
+            credentials: 'include'
+        });
+        await handleApiResponse(res);
+        const data = await res.json();
+
+        currentPermsUserId = userId;
+        currentPermsMemberRole = data.member.troopRole;
+
+        // Show member info
+        const memberInfo = document.getElementById('permsMemberInfo');
+        if (memberInfo) {
+            memberInfo.innerHTML = `
+                <strong>${data.member.firstName} ${data.member.lastName}</strong>
+                <span class="role-badge role-${data.member.troopRole}">${data.member.troopRole}</span>
+            `;
+        }
+
+        renderPrivilegeMatrix(data.privileges);
+
+        if (container) container.style.display = '';
+        if (emptyState) emptyState.style.display = 'none';
+    } catch (error) {
+        console.error('Failed to load privileges:', error);
+        showFeedback('Failed to load member privileges', true);
+    }
+}
+
+function renderPrivilegeMatrix(privileges) {
+    const tbody = document.getElementById('permsMatrixBody');
+    if (!tbody) return;
+
+    let html = '';
+    let lastCategory = '';
+
+    for (const priv of privileges) {
+        // Category header row
+        if (priv.category !== lastCategory) {
+            lastCategory = priv.category;
+            html += `<tr class="priv-category-row"><td colspan="7">${priv.category}</td></tr>`;
+        }
+
+        const isOverride = priv.effectiveScope !== priv.defaultScope;
+        const rowClass = isOverride ? 'priv-row-override' : '';
+        const futureTag = priv.future ? ' <span class="priv-future-tag">(future)</span>' : '';
+
+        html += `<tr class="${rowClass}" data-code="${priv.code}">`;
+        html += `<td class="priv-name-col">${priv.name}${futureTag}</td>`;
+
+        for (const scope of SCOPE_ORDER) {
+            const checked = priv.effectiveScope === scope ? 'checked' : '';
+            html += `<td class="priv-scope-col">
+                <input type="radio" name="priv_${priv.code}" value="${scope}" ${checked}
+                    data-code="${priv.code}" data-default="${priv.defaultScope}">
+            </td>`;
+        }
+
+        html += `<td class="priv-default-col">${priv.defaultScope === 'none' ? '---' : priv.defaultScope}</td>`;
+        html += '</tr>';
+    }
+
+    tbody.innerHTML = html;
+
+    // Add change listeners to highlight overrides
+    tbody.querySelectorAll('input[type="radio"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const row = e.target.closest('tr');
+            const defaultScope = e.target.dataset.default;
+            if (e.target.value !== defaultScope) {
+                row.classList.add('priv-row-override');
+            } else {
+                row.classList.remove('priv-row-override');
+            }
+        });
+    });
+}
+
+function collectPrivilegeOverrides() {
+    const overrides = [];
+    for (const priv of PRIVILEGE_DEFINITIONS) {
+        const checked = document.querySelector(`input[name="priv_${priv.code}"]:checked`);
+        if (checked) {
+            overrides.push({ code: priv.code, scope: checked.value });
+        }
+    }
+    return overrides;
+}
+
+async function savePrivilegeOverrides() {
+    if (!currentPermsUserId || !selectedTroopId) return;
+
+    const overrides = collectPrivilegeOverrides();
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/troop/${selectedTroopId}/members/${currentPermsUserId}/privileges`, {
+            method: 'PUT',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ overrides })
+        });
+        await handleApiResponse(res);
+        const data = await res.json();
+
+        // Re-render with saved state
+        renderPrivilegeMatrix(data.privileges);
+        showFeedback('Permissions saved successfully');
+    } catch (error) {
+        console.error('Failed to save privileges:', error);
+        showFeedback('Failed to save permissions', true);
+    }
+}
+
+async function resetPrivilegesToDefaults() {
+    if (!currentPermsUserId || !selectedTroopId) return;
+    if (!confirm('Reset all privileges to role defaults? You must click Save to apply.')) return;
+
+    // Reset radios to defaults using client-side constants
+    const roleDefaults = ROLE_PRIVILEGE_DEFAULTS[currentPermsMemberRole] || ROLE_PRIVILEGE_DEFAULTS.member;
+
+    for (const priv of PRIVILEGE_DEFINITIONS) {
+        const defaultScope = roleDefaults[priv.code] || 'none';
+        const radio = document.querySelector(`input[name="priv_${priv.code}"][value="${defaultScope}"]`);
+        if (radio) {
+            radio.checked = true;
+            const row = radio.closest('tr');
+            if (row) row.classList.remove('priv-row-override');
+        }
+    }
 }
 
 // Modal functions
@@ -3742,7 +2972,7 @@ if (document.readyState === 'loading') {
         setupMobileMenu();
         setupTheme();
         setupImport();
-        setupCookieTableListeners();
+
         setupDangerZone();
         setupTroopManagement();
         setupTroopNavigation();
@@ -3758,7 +2988,7 @@ if (document.readyState === 'loading') {
         setupMobileMenu();
         setupTheme();
         setupImport();
-        setupCookieTableListeners();
+
         setupDangerZone();
         setupScrollIndicators();
         setupTroopManagement();
