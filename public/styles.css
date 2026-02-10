@@ -631,28 +631,24 @@ textarea:focus-visible,
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-sm);
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-sm);
 }
 
 .summary-label {
-    display: block;
     font-size: 0.85rem;
-    margin-bottom: var(--space-sm);
     color: #666;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-weight: var(--font-medium);
-    display: flex;
-    flex-direction: column;
+    white-space: nowrap;
 }
 
 .summary-value {
-    display: block;
     font-size: 1.5rem;
     font-weight: var(--font-bold);
     color: var(--primary-color);
-    display: flex;
-    flex-direction: column;
 }
 
 /* Payment Methods List (Settings) */
