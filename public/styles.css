@@ -594,14 +594,15 @@ textarea:focus-visible,
     }
 }
 
-/* Summary Section */
+/* Summary Section - Always single column layout */
 .summary-card {
     display: grid;
     grid-template-columns: 1fr;
     gap: var(--space-lg);
 }
 
-/* Tablet: 2 columns */
+/* Note: Multi-column media queries removed - keeping single column layout on all screen sizes */
+/* Tablet: 2 columns - REMOVED
 @media (min-width: 768px) {
     .summary-card {
         grid-template-columns: repeat(2, 1fr);
@@ -611,13 +612,15 @@ textarea:focus-visible,
         grid-column: auto;
     }
 }
+*/
 
-/* Desktop: 4 columns */
+/* Desktop: 4 columns - REMOVED
 @media (min-width: 1024px) {
     .summary-card {
         grid-template-columns: repeat(4, 1fr);
     }
 }
+*/
 
 .summary-item {
     background: var(--card-background);
@@ -639,6 +642,8 @@ textarea:focus-visible,
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-weight: var(--font-medium);
+    display: flex;
+    flex-direction: column;
 }
 
 .summary-value {
@@ -646,6 +651,8 @@ textarea:focus-visible,
     font-size: 1.5rem;
     font-weight: var(--font-bold);
     color: var(--primary-color);
+    display: flex;
+    flex-direction: column;
 }
 
 /* Payment Methods List (Settings) */
