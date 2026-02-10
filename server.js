@@ -45,6 +45,48 @@ const PORT = process.env.PORT || 3000;
         process.exit(1);
     }
     logger.info('PostgreSQL connection established successfully');
+
+    // Safe schema migrations - add columns if they don't exist
+    try {
+        // Add position column to troop_members
+        await db.query(`
+            ALTER TABLE troop_members ADD COLUMN IF NOT EXISTS position VARCHAR(50)
+        `).catch(() => {});
+
+        // Add additionalRoles column (JSON array of role strings)
+        await db.query(`
+            ALTER TABLE troop_members ADD COLUMN IF NOT EXISTS "additionalRoles" JSONB DEFAULT '[]'
+        `).catch(() => {});
+
+        // Relax the role CHECK constraint to include new positions
+        await db.query(`
+            ALTER TABLE troop_members DROP CONSTRAINT IF EXISTS role_check
+        `).catch(() => {});
+        await db.query(`
+            ALTER TABLE troop_members ADD CONSTRAINT role_check
+            CHECK (role IN ('member', 'co-leader', 'assistant', 'parent', 'troop_leader', 'volunteer'))
+        `).catch(() => {});
+
+        // Allow users.email to be nullable for members added by name only
+        await db.query(`
+            ALTER TABLE users ALTER COLUMN email DROP NOT NULL
+        `).catch(() => {});
+
+        // Drop the original unique constraint on email, replace with partial unique index
+        await db.query(`
+            ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_key
+        `).catch(() => {});
+        await db.query(`
+            DROP INDEX IF EXISTS idx_users_email
+        `).catch(() => {});
+        await db.query(`
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL
+        `).catch(() => {});
+
+        logger.info('Schema migration checks completed');
+    } catch (err) {
+        logger.warn('Schema migration checks had issues (non-fatal)', { error: err.message });
+    }
 })();
 
 // Note: PostgreSQL schema is managed via migration files in /migrations/
@@ -1494,7 +1536,7 @@ app.put('/api/troop/:troopId', auth.isAuthenticated, async (req, res) => {
 app.post('/api/troop/:troopId/members', auth.isAuthenticated, async (req, res) => {
     try {
         const { troopId } = req.params;
-        const { email, role } = req.body;
+        const { email, role, firstName, lastName, address, dateOfBirth, den, familyInfo, position, level, roles } = req.body;
 
         // Verify user has access
         const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
@@ -1505,10 +1547,44 @@ app.post('/api/troop/:troopId/members', auth.isAuthenticated, async (req, res) =
             return res.status(403).json({ error: 'Access denied' });
         }
 
-        // Find user by email
-        const user = await db.getOne('SELECT id, "firstName", "lastName", email FROM users WHERE email = $1', [email]);
+        let user = null;
+
+        // If email provided, try to find existing user
+        if (email) {
+            user = await db.getOne('SELECT id, "firstName", "lastName", email FROM users WHERE email = $1', [email]);
+        }
+
+        // If no user found, create one with the provided name
         if (!user) {
-            return res.status(404).json({ error: 'User not found with that email' });
+            if (!firstName || !lastName) {
+                return res.status(400).json({ error: 'First name and last name are required' });
+            }
+
+            // Determine user role based on position
+            let userRole = 'scout';
+            if (position === 'Troop Leader' || position === 'Co-Leader') {
+                userRole = 'troop_leader';
+            } else if (position === 'Troop Volunteer') {
+                userRole = 'parent'; // closest existing role for volunteers
+            }
+
+            const newUser = await db.getOne(`
+                INSERT INTO users ("firstName", "lastName", email, role, "isActive", "dateOfBirth")
+                VALUES ($1, $2, $3, $4, TRUE, $5)
+                RETURNING id, "firstName", "lastName", email
+            `, [firstName, lastName, email || null, userRole, dateOfBirth || null]);
+
+            user = newUser;
+        }
+
+        // Map position to troop_members role
+        let memberRole = 'member';
+        if (position === 'Troop Leader') memberRole = 'troop_leader';
+        else if (position === 'Co-Leader') memberRole = 'co-leader';
+        else if (position === 'Troop Volunteer') memberRole = 'volunteer';
+        else if (role) {
+            const validRoles = ['member', 'co-leader', 'assistant', 'parent', 'troop_leader', 'volunteer'];
+            memberRole = validRoles.includes(role) ? role : 'member';
         }
 
         // Check if already a member
@@ -1518,20 +1594,21 @@ app.post('/api/troop/:troopId/members', auth.isAuthenticated, async (req, res) =
                 return res.status(409).json({ error: 'User is already a member of this troop' });
             }
             // Reactivate if previously inactive
-            await db.run('UPDATE troop_members SET status = $1, role = $2, "joinDate" = NOW() WHERE id = $3',
-                ['active', role || 'member', existingMember.id]);
+            await db.run(`
+                UPDATE troop_members
+                SET status = 'active', role = $1, "joinDate" = NOW(),
+                    "scoutLevel" = $2, position = $3, "additionalRoles" = $4
+                WHERE id = $5
+            `, [memberRole, level || null, position || null, JSON.stringify(roles || []), existingMember.id]);
         } else {
             // Add new member
-            const validRoles = ['member', 'co-leader', 'assistant'];
-            const memberRole = validRoles.includes(role) ? role : 'member';
-
             await db.run(`
-                INSERT INTO troop_members ("troopId", "userId", role, "joinDate", status)
-                VALUES ($1, $2, $3, NOW(), 'active')
-            `, [troopId, user.id, memberRole]);
+                INSERT INTO troop_members ("troopId", "userId", role, "scoutLevel", position, "additionalRoles", "joinDate", status)
+                VALUES ($1, $2, $3, $4, $5, $6, NOW(), 'active')
+            `, [troopId, user.id, memberRole, level || null, position || null, JSON.stringify(roles || [])]);
         }
 
-        logger.info('Member added to troop', { troopId, userId: user.id, addedBy: req.session.userId });
+        logger.info('Member added to troop', { troopId, userId: user.id, position, level, addedBy: req.session.userId });
         res.status(201).json({ success: true, member: user });
     } catch (error) {
         logger.error('Error adding troop member', { error: error.message });

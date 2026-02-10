@@ -1,5 +1,11 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 const logger = require('../logger');
+
+// PostgreSQL returns NUMERIC/DECIMAL as strings to preserve precision.
+// Convert them to JavaScript numbers for client compatibility.
+types.setTypeParser(1700, (val) => parseFloat(val));  // NUMERIC
+types.setTypeParser(700, (val) => parseFloat(val));    // FLOAT4
+types.setTypeParser(701, (val) => parseFloat(val));    // FLOAT8
 
 // Create PostgreSQL connection pool
 const pool = new Pool({
