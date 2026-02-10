@@ -153,10 +153,10 @@ async function init() {
     // Display user info in the header (if user info element exists)
     displayUserInfo();
 
-    await Promise.all([loadSales(), loadDonations(), loadEvents(), loadProfile(), loadPaymentMethods()]);
+    await Promise.all([loadSales(), loadDonations(), loadEvents(), loadProfile(), loadPaymentMethods(), loadScoutProfile()]);
     renderSales();
     renderDonations();
-    renderEvents();
+    renderCalendar();
     renderPaymentMethodsSettings();
     updateSummary();
     updateBreakdown();
@@ -245,16 +245,29 @@ async function loadDonations() {
     }
 }
 
-// Load events from API
+// Global calendar state
+let currentCalendarDate = new Date();
+
+// Load events from API (Troop Calendar)
 async function loadEvents() {
     try {
-        const response = await fetch(`${API_BASE_URL}/events`);
+        let endpoint = `${API_BASE_URL}/events`; // Fallback
+        
+        if (currentUser && currentUser.troopId) {
+             endpoint = `${API_BASE_URL}/troop/${currentUser.troopId}/events`;
+        } else {
+             console.debug('No troopId for user, using default events endpoint');
+        }
+
+        const response = await fetch(endpoint);
         await handleApiResponse(response);
         events = await response.json();
+        renderCalendar();
     } catch (error) {
         if (error.message === 'Authentication required') return;
         console.error('Error loading events:', error);
         events = [];
+        renderCalendar();
     }
 }
 
@@ -281,6 +294,63 @@ async function loadProfile() {
         console.error('Error loading profile:', error);
         profile = { userId: null, photoData: null, qrCodeUrl: null, paymentQrCodeUrl: null, goalBoxes: 0, goalAmount: 0 };
     }
+}
+
+// Load scout profile (Phase 3.1)
+async function loadScoutProfile() {
+    try {
+        if (!currentUser || !currentUser.id) {
+            console.debug('No current user, skipping scout profile load');
+            return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/scouts/${currentUser.id}/profile`);
+
+        // 404 means no scout profile yet (user might not be a scout)
+        if (response.status === 404) {
+            console.debug('No scout profile found for user');
+            return;
+        }
+
+        await handleApiResponse(response);
+        const scoutProfile = await response.json();
+
+        console.log('Scout profile loaded:', scoutProfile);
+        renderScoutLevelBadge(scoutProfile);
+    } catch (error) {
+        if (error.message === 'Authentication required') return;
+        console.debug('Error loading scout profile:', error.message);
+        // Non-critical error, don't break page
+    }
+}
+
+// Render scout level badge with official colors
+function renderScoutLevelBadge(scoutProfile) {
+    const container = document.getElementById('scoutLevelBadgeContainer');
+    const badge = document.getElementById('scoutLevelBadge');
+    const levelName = document.getElementById('scoutLevelName');
+    const orgName = document.getElementById('scoutOrgName');
+
+    if (!container || !badge || !levelName || !orgName || !scoutProfile.levelName) {
+        return;
+    }
+
+    // Set level name and organization
+    levelName.textContent = scoutProfile.levelName;
+    orgName.textContent = scoutProfile.orgName || 'Scout';
+
+    // Apply color class based on level code
+    if (scoutProfile.levelCode) {
+        // Remove all level classes
+        badge.className = 'scout-level-badge';
+        // Add the level-specific class
+        badge.classList.add(`${scoutProfile.levelCode}-level`);
+    }
+
+    // Show the badge
+    container.style.display = 'flex';
+
+    console.log('Scout level badge rendered:', scoutProfile.levelName, scoutProfile.levelCode);
 }
 
 // Update Profile tab display
@@ -911,12 +981,14 @@ async function handleAddEvent(e) {
     const eventName = eventNameInput.value.trim();
     const eventDate = eventDateInput.value;
     const description = eventDescriptionInput.value.trim();
-    const initialBoxes = parseInt(initialBoxesInput.value) || 0;
-    const initialCases = parseInt(initialCasesInput.value) || 0;
-    const remainingBoxes = parseInt(remainingBoxesInput.value) || 0;
-    const remainingCases = parseInt(remainingCasesInput.value) || 0;
-    const donationsReceived = parseFloat(eventDonationsInput.value) || 0;
     
+    // New fields
+    const eventType = document.getElementById('eventType').value;
+    const startTime = document.getElementById('eventStartTime').value;
+    const endTime = document.getElementById('eventEndTime').value;
+    const location = document.getElementById('eventLocation').value;
+    const targetGroup = document.getElementById('targetGroup').value;
+
     if (!eventName || !eventDate) {
         alert('Please enter event name and date.');
         return;
@@ -924,13 +996,19 @@ async function handleAddEvent(e) {
     
     const event = {
         eventName,
-        eventDate: new Date(eventDate).toISOString(),
+        eventDate, // Send raw date string (YYYY-MM-DD), backend handles parsing
         description,
-        initialBoxes,
-        initialCases,
-        remainingBoxes,
-        remainingCases,
-        donationsReceived
+        initialBoxes: 0,
+        initialCases: 0,
+        remainingBoxes: 0,
+        remainingCases: 0,
+        donationsReceived: 0,
+        eventType,
+        startTime,
+        endTime,
+        location,
+        targetGroup,
+        troopId: currentUser ? currentUser.troopId : null
     };
     
     try {
@@ -952,20 +1030,24 @@ async function handleAddEvent(e) {
         }
         
         if (!response.ok) {
-            throw new Error(editingEventId ? 'Failed to update event' : 'Failed to add event');
+            const err = await response.json();
+            throw new Error(err.error || (editingEventId ? 'Failed to update event' : 'Failed to add event'));
         }
         
         await loadEvents();
-        renderEvents();
+        renderCalendar(); // Use new render function
         updateSummary();
         
         // Reset form and editing state
         resetEventForm();
         
+        // Hide form after save
+        toggleAddEventForm();
+        
         showFeedback(editingEventId ? 'Event updated successfully!' : 'Event saved successfully!');
     } catch (error) {
         console.error('Error saving event:', error);
-        alert('Error saving event. Please try again.');
+        alert(`Error saving event: ${error.message}`);
     }
 }
 
@@ -1037,7 +1119,7 @@ async function handleDeleteEvent(id) {
             }
             
             await loadEvents();
-            renderEvents();
+            renderCalendar();
             updateSummary();
             showFeedback('Event deleted.');
         } catch (error) {
@@ -1047,80 +1129,124 @@ async function handleDeleteEvent(id) {
     }
 }
 
-// Render events list
-function renderEvents() {
-    if (!eventsList) return;
-    if (events.length === 0) {
-        eventsList.innerHTML = '<p class="empty-message">No events recorded yet.</p>';
-        return;
+// Render Calendar
+function renderCalendar() {
+    const calendarGrid = document.getElementById('calendarGrid');
+    const monthYearLabel = document.getElementById('calendarMonthYear');
+    
+    if (!calendarGrid || !monthYearLabel) return;
+
+    calendarGrid.innerHTML = '';
+    
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
+    
+    monthYearLabel.textContent = currentCalendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDayIndex = firstDay.getDay();
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+    
+    // Prev Month
+    for (let i = startDayIndex - 1; i >= 0; i--) {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'calendar-day other-month';
+        dayDiv.innerHTML = `<div class="calendar-date-num">${prevMonthLastDay - i}</div>`;
+        calendarGrid.appendChild(dayDiv);
     }
     
-    eventsList.innerHTML = events.map(event => {
-        const date = new Date(event.eventDate);
-        const formattedDate = date.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+    const today = new Date();
+    // Get active filters
+    const activeFiltersEl = document.querySelectorAll('.event-filter:checked');
+    // If no filters found (maybe on different tab), assume all?
+    const activeFilters = activeFiltersEl.length > 0 ? Array.from(activeFiltersEl).map(cb => cb.value) : ['Troop', 'Pack', 'Lion', 'Tiger', 'Wolf', 'Bear', 'Webelos', 'AOL', 'Daisy', 'Brownie', 'Junior', 'Cadette', 'Senior', 'Ambassador', 'GS'];
+
+    // Current Month
+    for (let i = 1; i <= lastDay.getDate(); i++) {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'calendar-day';
+        
+        if (year === today.getFullYear() && month === today.getMonth() && i === today.getDate()) {
+            dayDiv.classList.add('today');
+        }
+        
+        dayDiv.innerHTML = `<div class="calendar-date-num">${i}</div>`;
+        
+        const dayEvents = events.filter(e => {
+            if (!e.eventDate) return false;
+            // Handle both ISO strings and potentially other formats if any
+            const eDate = new Date(e.eventDate); 
+            // Correct for timezone issues if date is stored as UTC but meant to be local date?
+            // "2026-02-10T00:00:00.000Z" -> Date object will be local.
+            // If the user entered "2026-02-10" in input type="date", it saves as YYYY-MM-DD.
+            // Let's assume standard local date matching.
+            return eDate.getDate() === i && eDate.getMonth() === month && eDate.getFullYear() === year;
         });
         
-        // Calculate total initial and remaining inventory in boxes
-        const totalInitial = event.initialBoxes + (event.initialCases * BOXES_PER_CASE);
-        const totalRemaining = event.remainingBoxes + (event.remainingCases * BOXES_PER_CASE);
-        const totalSold = Math.max(0, totalInitial - totalRemaining); // Prevent negative values
-        const revenue = totalSold * PRICE_PER_BOX;
+        dayEvents.forEach(event => {
+            const group = event.targetGroup || 'Troop';
+            if (activeFilters.length > 0 && !activeFilters.includes(group)) {
+                return;
+            }
+
+            const eventPill = document.createElement('div');
+            eventPill.className = `calendar-event event-${group}`;
+            
+            let timeStr = '';
+            if (event.startTime) {
+                timeStr = event.startTime;
+            }
+            
+            eventPill.textContent = (timeStr ? timeStr + ' ' : '') + event.eventName;
+            eventPill.title = `${event.eventName}\n${event.startTime || ''} - ${event.endTime || ''}\n${event.location || ''}\n${event.description || ''}`;
+            
+            eventPill.onclick = (e) => {
+                e.stopPropagation();
+                alert(`${event.eventName}\nTime: ${event.startTime || 'N/A'}\nLocation: ${event.location || 'N/A'}\nGroup: ${group}\n\n${event.description || ''}`);
+            };
+            
+            dayDiv.appendChild(eventPill);
+        });
         
-        return `
-            <div class="event-item">
-                <div class="event-header">
-                    <div class="event-name">${event.eventName}</div>
-                    <div class="event-date">${formattedDate}</div>
-                </div>
-                ${event.description ? `<div class="event-description">${event.description}</div>` : ''}
-                <div class="event-stats">
-                    <div class="event-stat">
-                        <span class="stat-label">Initial:</span>
-                        <span class="stat-value">${totalInitial} boxes (${event.initialCases} cases, ${event.initialBoxes} boxes)</span>
-                    </div>
-                    <div class="event-stat">
-                        <span class="stat-label">Remaining:</span>
-                        <span class="stat-value">${totalRemaining} boxes (${event.remainingCases} cases, ${event.remainingBoxes} boxes)</span>
-                    </div>
-                    <div class="event-stat highlight">
-                        <span class="stat-label">Total Sold:</span>
-                        <span class="stat-value">${totalSold} boxes ($${revenue})</span>
-                    </div>
-                    ${event.donationsReceived > 0 ? `
-                    <div class="event-stat">
-                        <span class="stat-label">Donations:</span>
-                        <span class="stat-value">$${parseFloat(event.donationsReceived || 0).toFixed(2)}</span>
-                    </div>
-                    ` : ''}
-                </div>
-                <div class="event-actions">
-                    <button class="btn-secondary btn-edit" data-event-id="${event.id}" style="margin-right: 8px;">Edit</button>
-                    <button class="btn-delete" data-event-id="${event.id}">Delete</button>
-                </div>
-            </div>
-        `;
-    }).join('');
+        calendarGrid.appendChild(dayDiv);
+    }
     
-    // Add event listeners for edit buttons
-    document.querySelectorAll('.events-list .btn-edit').forEach(button => {
-        button.addEventListener('click', () => {
-            const eventId = button.getAttribute('data-event-id');
-            handleEditEvent(eventId);
-        });
-    });
+    // Next Month
+    const totalCells = startDayIndex + lastDay.getDate();
+    const rows = Math.ceil(totalCells / 7);
+    const nextMonthPadding = (rows * 7) - totalCells;
     
-    // Add event listeners for delete buttons
-    document.querySelectorAll('.events-list .btn-delete').forEach(button => {
-        button.addEventListener('click', () => {
-            const eventId = button.getAttribute('data-event-id');
-            handleDeleteEvent(eventId);
-        });
-    });
+    for (let i = 1; i <= nextMonthPadding; i++) {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'calendar-day other-month';
+        dayDiv.innerHTML = `<div class="calendar-date-num">${i}</div>`;
+        calendarGrid.appendChild(dayDiv);
+    }
+}
+
+// Calendar Helpers
+function changeMonth(offset) {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset);
+    renderCalendar();
+}
+
+function goToToday() {
+    currentCalendarDate = new Date();
+    renderCalendar();
+}
+
+function toggleAddEventForm() {
+    const form = document.getElementById('addEventSection');
+    if (form) form.classList.toggle('hidden');
+}
+
+async function exportCalendar() {
+    if (!currentUser || !currentUser.troopId) {
+        alert('No troop selected or not a member of a troop.');
+        return;
+    }
+    window.location.href = `${API_BASE_URL}/troop/${currentUser.troopId}/calendar/export`;
 }
 
 // Helper to generate a unique key for grouping sales into an order
@@ -1816,7 +1942,6 @@ function updateSummary() {
     eventSalesElement.textContent = `${eventBoxes} boxes`;
     
     totalRevenueElement.textContent = `$${totalRevenue.toFixed(2)}`;
-    totalDonationsElement.textContent = `$${totalDonationAmount.toFixed(2)}`;
 }
 
 // Update cookie breakdown

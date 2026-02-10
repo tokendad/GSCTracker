@@ -44,18 +44,18 @@
     /* Spacing scale (8px base) */
     --space-xs: 0.25rem;
     --space-sm: 0.5rem;
-    --space-md: var(--space-md);
-    --space-lg: var(--space-lg);
+    --space-md: 0.75rem;
+    --space-lg: 1rem;
     --space-xl: 1.25rem;
     --space-2xl: 1.5rem;
     --space-3xl: 2rem;
 
     /* Typography scale */
     --text-xs: 0.7rem;
-    --text-sm: var(--space-md);
+    --text-sm: 0.75rem;
     --text-base: 0.875rem;
     --text-md: 0.95rem;
-    --text-lg: var(--space-lg);
+    --text-lg: 1rem;
     --text-xl: 1.1rem;
     --text-2xl: 1.25rem;
     --text-3xl: 1.5rem;
@@ -103,31 +103,29 @@ body {
 header {
     background: linear-gradient(135deg, var(--primary-color), var(--deep-color));
     color: white;
-    padding: var(--space-lg) var(--space-lg);
+    padding: 1rem 1rem;
     text-align: center;
     box-shadow: var(--shadow);
     position: relative;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
 }
 
 header h1 {
     font-size: var(--text-3xl);
     font-weight: var(--font-semibold);
     margin-bottom: 0.5rem;
-    flex: 1;
-    text-align: center;
 }
 
 /* Mobile Menu Button */
 .mobile-menu-btn {
     display: none;
     position: absolute;
-    left: var(--space-lg);
+    left: 1rem;
     background: rgba(255, 255, 255, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.3);
-    padding: var(--space-sm);
+    padding: 0.5rem;
     border-radius: 12px;
     cursor: pointer;
     font-size: 1.5rem;
@@ -165,11 +163,11 @@ header h1 {
 .troop-top-nav {
     display: flex;
     gap: 0.5rem;
-    margin-bottom: var(--space-lg);
+    margin-bottom: 1rem;
     flex-wrap: wrap;
 }
 .troop-tab {
-    padding: var(--space-sm) var(--space-md);
+    padding: 0.5rem 0.75rem;
     border-radius: 8px;
     border: 1px solid var(--border-color);
     background: var(--card-background);
@@ -181,7 +179,7 @@ header h1 {
     border-color: transparent;
 }
 .troop-tab-panel {
-    padding: var(--space-sm) 0;
+    padding: 0.5rem 0;
 }
 .troop-tab-panel.hidden { display: none; }
 .membership-subnav {
@@ -193,7 +191,7 @@ header h1 {
 }
 
 .membership-subtab {
-    padding: calc(var(--space-sm) * 0.6) calc(var(--space-sm) * 1.2);
+    padding: 0.3rem 0.6rem;
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
     background: var(--card-background);
@@ -205,7 +203,7 @@ header h1 {
 
 @media (min-width: 768px) {
     .membership-subtab {
-        padding: calc(var(--space-xs) + 0.1rem) calc(var(--space-sm) + 0.15rem);
+        padding: 0.35rem 0.65rem;
         font-size: 0.95rem;
     }
 }
@@ -254,7 +252,7 @@ header h1 {
 .membership-table th,
 .membership-table td {
     border: 1px solid var(--border-color);
-    padding: var(--space-sm);
+    padding: 0.5rem;
     text-align: left;
     font-size: 0.85rem;
 }
@@ -273,7 +271,7 @@ header h1 {
 
     .membership-table th,
     .membership-table td {
-        padding: calc(var(--space-sm) * 0.8);
+        padding: 0.4rem;
         font-size: 0.8rem;
     }
 }
@@ -286,11 +284,11 @@ header h1 {
 /* Invitations Button in Header */
 .invitations-btn {
     position: absolute;
-    right: var(--space-lg);
+    right: 1rem;
     background: rgba(255, 255, 255, 0.2);
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.3);
-    padding: var(--space-sm);
+    padding: 0.5rem;
     border-radius: 12px;
     cursor: pointer;
     transition: background 0.2s;
@@ -311,8 +309,8 @@ header h1 {
     background: var(--danger-color);
     color: white;
     border-radius: 12px;
-    padding: calc(var(--space-xs) * 0.5) var(--space-sm);
-    font-size: var(--space-md);
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
     font-weight: var(--font-semibold);
     min-width: 20px;
     text-align: center;
@@ -321,7 +319,7 @@ header h1 {
 /* Main Content */
 main {
     flex: 1;
-    padding: var(--space-xl) var(--space-lg);
+    padding: 1.25rem 1rem;
 }
 
 /* Sections */
@@ -336,13 +334,13 @@ section {
 
 section h2 {
     font-size: var(--text-2xl);
-    margin-bottom: var(--space-lg);
+    margin-bottom: 1rem;
     color: var(--primary-color);
 }
 
 /* Form Styles */
 .form-group {
-    margin-bottom: var(--space-lg);
+    margin-bottom: 1rem;
 }
 
 .form-group label {
@@ -355,7 +353,7 @@ section h2 {
 .form-group input,
 .form-group select {
     width: 100%;
-    padding: calc(var(--space-md) + var(--space-sm));
+    padding: 0.875rem;
     border: 2px solid var(--border-color);
     border-radius: 12px;
     background-color: white;
@@ -555,18 +553,18 @@ textarea:focus-visible,
 .danger-section {
     display: flex;
     flex-direction: column;
-    gap: var(--space-lg);
+    gap: 1rem;
 }
 
 .danger-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-lg);
+    padding: 1rem;
     background: var(--background-color);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    gap: var(--space-lg);
+    gap: 1rem;
 }
 
 .danger-info {
@@ -665,7 +663,7 @@ textarea:focus-visible,
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-lg);
+    padding: 1rem;
     background: var(--background-color);
     border-radius: 12px;
     border: 1px solid var(--border-color);
@@ -692,7 +690,7 @@ textarea:focus-visible,
 
 .add-payment-form {
     background: var(--background-color);
-    padding: var(--space-lg);
+    padding: 1rem;
     border-radius: 12px;
     border: 1px solid var(--border-color);
 }
@@ -712,7 +710,7 @@ textarea:focus-visible,
     border-radius: var(--radius-sm);
     font-size: var(--text-sm);
     cursor: pointer;
-    margin-left: var(--space-lg);
+    margin-left: 1rem;
     width: auto;
     min-height: 36px;
 }
@@ -732,7 +730,7 @@ textarea:focus-visible,
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--space-lg);
+    margin-bottom: 1rem;
 }
 
 .section-header h2 {
@@ -750,7 +748,7 @@ textarea:focus-visible,
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-lg);
+    padding: 1rem;
     background: var(--background-color);
     border-radius: 16px;
     border-left: 4px solid var(--primary-color);
@@ -762,7 +760,7 @@ textarea:focus-visible,
 
 .sale-cookie {
     font-weight: var(--font-semibold);
-    font-size: var(--space-lg);
+    font-size: 1rem;
     margin-bottom: 0.25rem;
 }
 
@@ -817,7 +815,7 @@ textarea:focus-visible,
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: calc(var(--space-md) + var(--space-sm));
+    padding: 0.875rem;
     background: var(--background-color);
     border-radius: 16px;
 }
@@ -829,7 +827,7 @@ textarea:focus-visible,
 .breakdown-quantity {
     background-color: var(--primary-color);
     color: white;
-    padding: 0.375rem var(--space-md);
+    padding: 0.375rem 0.75rem;
     border-radius: 20px;
     font-weight: var(--font-semibold);
     font-size: 0.875rem;
@@ -852,7 +850,7 @@ textarea:focus-visible,
     height: 150px;
     border-radius: 50%;
     object-fit: cover;
-    margin: 0 auto var(--space-lg);
+    margin: 0 auto 1rem;
     display: block;
 }
 
@@ -867,8 +865,8 @@ textarea:focus-visible,
 
 .qr-code-display {
     text-align: center;
-    margin-top: var(--space-lg);
-    padding: var(--space-lg);
+    margin-top: 1rem;
+    padding: 1rem;
     background: var(--background-color);
     border-radius: 12px;
 }
@@ -882,7 +880,7 @@ textarea:focus-visible,
 .goal-inputs {
     display: grid;
     grid-template-columns: 1fr auto;
-    gap: var(--space-lg);
+    gap: 1rem;
     align-items: end;
     margin-bottom: var(--space-2xl);
 }
@@ -890,20 +888,20 @@ textarea:focus-visible,
 .goal-inputs small {
     display: block;
     color: #666;
-    font-size: var(--space-md);
+    font-size: 0.75rem;
     margin-top: 0.25rem;
 }
 
 .goal-display {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: var(--space-lg);
-    margin-bottom: var(--space-lg);
+    gap: 1rem;
+    margin-bottom: 1rem;
 }
 
 .goal-item {
     background: var(--background-color);
-    padding: var(--space-lg);
+    padding: 1rem;
     border-radius: 16px;
     text-align: center;
 }
@@ -949,30 +947,30 @@ textarea:focus-visible,
     display: inline-block;
     background-color: var(--secondary-color);
     color: white;
-    padding: var(--space-xs) 0.5rem;
+    padding: 0.25rem 0.5rem;
     border-radius: 4px;
-    font-size: var(--space-md);
+    font-size: 0.75rem;
     font-weight: var(--font-semibold);
     margin-left: 0.5rem;
 }
 
 /* Donations Section */
 .donations-summary {
-    margin: var(--space-lg) 0;
+    margin: 1rem 0;
 }
 
 .donations-list {
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
-    margin-top: var(--space-lg);
+    margin-top: 1rem;
 }
 
 .donation-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-lg);
+    padding: 1rem;
     background: var(--background-color);
     border-radius: 16px;
     border-left: 4px solid var(--secondary-color);
@@ -1003,7 +1001,7 @@ textarea:focus-visible,
 .empty-message {
     text-align: center;
     color: #999;
-    padding: var(--space-3xl) var(--space-lg);
+    padding: 2rem 1rem;
     font-style: italic;
 }
 
@@ -1049,7 +1047,7 @@ textarea:focus-visible,
     overflow-x: auto;
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    margin-bottom: var(--space-lg);
+    margin-bottom: 1rem;
 }
 
 .cookie-selection-table {
@@ -1060,7 +1058,7 @@ textarea:focus-visible,
 
 .cookie-selection-table th,
 .cookie-selection-table td {
-    padding: var(--space-sm);
+    padding: 0.5rem;
     border: 1px solid var(--border-color);
     text-align: center;
     vertical-align: middle;
@@ -1086,7 +1084,7 @@ textarea:focus-visible,
 
 .qty-input {
     width: 60px;
-    padding: var(--space-xs);
+    padding: 0.25rem;
     border: 1px solid var(--border-color);
     border-radius: 4px;
     text-align: center;
@@ -1113,7 +1111,7 @@ textarea:focus-visible,
     background: var(--card-background);
     border-radius: 12px;
     border: 1px solid var(--border-color);
-    margin-top: var(--space-lg);
+    margin-top: 1rem;
 }
 
 .sales-table {
@@ -1124,7 +1122,7 @@ textarea:focus-visible,
 
 .sales-table th,
 .sales-table td {
-    padding: var(--space-sm) 0.25rem;
+    padding: 0.5rem 0.25rem;
     border: 1px solid var(--border-color);
     text-align: center;
 }
@@ -1257,11 +1255,11 @@ textarea:focus-visible,
 .status-legend {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-lg);
+    gap: 1rem;
     justify-content: center;
-    margin-top: var(--space-md);
-    padding: var(--space-sm);
-    font-size: var(--space-md);
+    margin-top: 0.75rem;
+    padding: 0.5rem;
+    font-size: 0.75rem;
     color: var(--text-muted);
 }
 
@@ -1297,7 +1295,7 @@ textarea:focus-visible,
 
 /* Order Status Buttons */
 .btn-order-status {
-    padding: var(--space-xs) 0.5rem;
+    padding: 0.25rem 0.5rem;
     font-size: 0.7rem;
     border-radius: 4px;
     border: none;
@@ -1365,7 +1363,7 @@ textarea:focus-visible,
 footer {
     background-color: var(--card-background);
     text-align: center;
-    padding: var(--space-lg);
+    padding: 1rem;
     color: #666;
     font-size: 0.875rem;
     border-top: 1px solid var(--border-color);
@@ -1457,7 +1455,7 @@ footer {
         background-color: var(--background-color);
         border-right: 1px solid var(--border-color);
         border-bottom: none;
-        padding: var(--space-md) 0.5rem;
+        padding: 0.75rem 0.5rem;
         padding-top: 0;
         overflow-y: auto;
         z-index: 100;
@@ -1528,7 +1526,7 @@ footer {
         width: calc(100% - 160px);
         margin-left: 160px;
         max-width: 1400px;
-        padding: var(--space-3xl);
+        padding: 2rem;
     }
 
     /* Footer alignment */
@@ -1543,7 +1541,7 @@ footer {
     }
 
     section {
-        padding: var(--space-3xl);
+        padding: 2rem;
     }
 
     section h2 {
@@ -1576,7 +1574,7 @@ footer {
 /* Desktop Styles */
 @media (min-width: 1024px) {
     main {
-        padding: calc(var(--space-2xl) + var(--space-lg));
+        padding: 2.5rem;
     }
 
     .summary-card {
@@ -1699,7 +1697,7 @@ footer {
 /* Event Sales Section */
 .event-sales-section textarea {
     width: 100%;
-    padding: calc(var(--space-md) + var(--space-sm));
+    padding: 0.875rem;
     border: 2px solid var(--border-color);
     border-radius: 12px;
     background-color: white;
@@ -1729,7 +1727,7 @@ footer {
 .events-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-lg);
+    gap: 1rem;
     margin-top: 1.5rem;
 }
 
@@ -1744,8 +1742,8 @@ footer {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: var(--space-md);
-    gap: var(--space-lg);
+    margin-bottom: 0.75rem;
+    gap: 1rem;
 }
 
 .event-name {
@@ -1763,8 +1761,8 @@ footer {
 .event-description {
     font-size: 0.9rem;
     color: #555;
-    margin-bottom: var(--space-lg);
-    padding: var(--space-sm);
+    margin-bottom: 1rem;
+    padding: 0.5rem;
     background: rgba(248, 181, 0, 0.1);
     border-radius: 4px;
 }
@@ -1773,7 +1771,7 @@ footer {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    margin-bottom: var(--space-lg);
+    margin-bottom: 1rem;
 }
 
 .event-stat {
@@ -1794,7 +1792,7 @@ footer {
 }
 
 .event-stat.highlight {
-    padding: var(--space-sm);
+    padding: 0.5rem;
     background: linear-gradient(135deg, var(--primary-color), var(--deep-color));
     color: white;
     border-radius: 12px;
@@ -1839,7 +1837,7 @@ footer {
     background-color: var(--card-background);
     box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
     z-index: 1000;
-    padding: var(--space-lg) 0.5rem;
+    padding: 1rem 0.5rem;
     padding-top: 80px;
     overflow-y: auto;
     transition: left 0.3s ease;
@@ -1855,8 +1853,8 @@ footer {
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
-    gap: var(--space-lg);
-    padding: var(--space-lg) 1.25rem;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
     margin-bottom: 0.5rem;
     background: transparent;
     border: none;
@@ -1898,7 +1896,7 @@ footer {
 .sidebar-divider {
     height: 1px;
     background-color: var(--border-color);
-    margin: var(--space-lg) 1.25rem;
+    margin: 1rem 1.25rem;
 }
 
 /* Logout Button in Sidebar */
@@ -1945,9 +1943,9 @@ footer {
 }
 
 .settings-group h3 {
-    font-size: var(--space-lg);
+    font-size: 1rem;
     font-weight: var(--font-semibold);
-    margin-bottom: var(--space-lg);
+    margin-bottom: 1rem;
     color: var(--text-color);
 }
 
@@ -1955,7 +1953,7 @@ footer {
     display: block;
     font-size: 0.95rem;
     font-weight: 500;
-    margin-bottom: var(--space-md);
+    margin-bottom: 0.75rem;
     color: var(--text-color);
 }
 
@@ -1970,7 +1968,7 @@ footer {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: var(--space-lg) 0.5rem;
+    padding: 1rem 0.5rem;
     background: var(--background-color);
     border: 2px solid var(--border-color);
     border-radius: 12px;
@@ -2025,7 +2023,7 @@ footer {
 .import-description {
     font-size: 0.875rem;
     color: #666;
-    margin-bottom: var(--space-lg);
+    margin-bottom: 1rem;
 }
 
 [data-theme="dark"] .import-description {
@@ -2035,8 +2033,8 @@ footer {
 .import-controls {
     display: flex;
     align-items: center;
-    gap: var(--space-lg);
-    margin-bottom: var(--space-lg);
+    gap: 1rem;
+    margin-bottom: 1rem;
 }
 
 .import-btn {
@@ -2054,7 +2052,7 @@ footer {
 }
 
 .import-status {
-    margin-top: var(--space-lg);
+    margin-top: 1rem;
     padding: var(--space-md);
     border-radius: 12px;
     font-size: 0.875rem;
@@ -2093,7 +2091,7 @@ footer {
     padding: var(--space-md);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    font-size: var(--space-lg);
+    font-size: 1rem;
     background-color: var(--card-background);
     color: var(--text-color);
     box-sizing: border-box;
@@ -2106,7 +2104,7 @@ footer {
 }
 
 .form-group {
-    margin-bottom: var(--space-lg);
+    margin-bottom: 1rem;
 }
 
 .form-group label {
@@ -2119,7 +2117,7 @@ footer {
 .form-hint {
     display: block;
     margin-top: 0.25rem;
-    font-size: var(--space-md);
+    font-size: 0.75rem;
     color: var(--text-muted);
 }
 
@@ -2140,7 +2138,7 @@ footer {
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    padding: var(--space-lg);
+    padding: 1rem;
 }
 
 .order-details-modal {
@@ -2157,7 +2155,7 @@ footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-lg) 1.5rem;
+    padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
     background: linear-gradient(135deg, var(--primary-color), var(--deep-color));
     border-radius: 16px 16px 0 0;
@@ -2197,15 +2195,15 @@ footer {
 }
 
 .detail-section h4 {
-    margin: 0 0 var(--space-md) 0;
+    margin: 0 0 0.75rem 0;
     color: var(--primary-color);
-    font-size: var(--space-lg);
+    font-size: 1rem;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 0.5rem;
 }
 
 .detail-section p {
-    margin: var(--space-sm) 0;
+    margin: 0.5rem 0;
     font-size: 0.95rem;
 }
 
@@ -2217,7 +2215,7 @@ footer {
 
 .cookie-detail-table th,
 .cookie-detail-table td {
-    padding: var(--space-sm);
+    padding: 0.5rem;
     border: 1px solid var(--border-color);
     text-align: left;
 }
@@ -2235,7 +2233,7 @@ footer {
 
 .detail-actions {
     margin-top: 1.5rem;
-    padding-top: var(--space-lg);
+    padding-top: 1rem;
     border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: flex-end;
@@ -2261,7 +2259,7 @@ footer {
 }
 
 .edit-order-modal .form-group {
-    margin-bottom: var(--space-md);
+    margin-bottom: 0.75rem;
 }
 
 .edit-order-modal .form-group label {
@@ -2275,7 +2273,7 @@ footer {
 .edit-order-modal .form-group input,
 .edit-order-modal .form-group select {
     width: 100%;
-    padding: var(--space-sm);
+    padding: 0.5rem;
     border: 1px solid var(--border-color);
     border-radius: 12px;
     font-size: 0.9rem;
@@ -2285,7 +2283,7 @@ footer {
 
 .edit-order-modal .form-row {
     display: flex;
-    gap: var(--space-lg);
+    gap: 1rem;
 }
 
 .edit-order-modal .form-row .form-group {
@@ -2302,7 +2300,7 @@ footer {
     display: flex;
     align-items: center;
     gap: var(--space-md);
-    padding: var(--space-sm);
+    padding: 0.5rem;
     background: rgba(0, 0, 0, 0.03);
     border-radius: 6px;
     transition: all 0.2s ease;
@@ -2321,7 +2319,7 @@ footer {
 
 .edit-cookie-qty {
     width: 70px;
-    padding: calc(var(--space-xs) + 0.1rem) var(--space-sm);
+    padding: 0.35rem 0.5rem;
     border: 1px solid var(--border-color);
     border-radius: 4px;
     text-align: center;
@@ -2334,7 +2332,7 @@ footer {
     color: #dc3545;
     font-size: 1.2rem;
     cursor: pointer;
-    padding: var(--space-xs) 0.5rem;
+    padding: 0.25rem 0.5rem;
     line-height: 1;
     border-radius: 4px;
     transition: background 0.2s;
@@ -2387,13 +2385,13 @@ footer {
     flex-direction: column;
     align-items: center;
     gap: 2rem;
-    padding: var(--space-lg);
+    padding: 1rem;
 }
 
 .profile-card {
     background: var(--card-background);
     border-radius: 16px;
-    padding: var(--space-3xl);
+    padding: 2rem;
     text-align: center;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     border: 1px solid var(--border-color);
@@ -2430,7 +2428,7 @@ footer {
 }
 
 .profile-hint {
-    margin-top: var(--space-lg);
+    margin-top: 1rem;
     font-size: 0.85rem;
     color: #888;
 }
@@ -2464,7 +2462,7 @@ footer {
 .qr-methods-container {
     display: flex;
     flex-direction: column;
-    gap: var(--space-lg);
+    gap: 1rem;
     width: 100%;
 }
 
@@ -2473,15 +2471,15 @@ footer {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: var(--space-lg);
+    padding: 1rem;
     border: 1px solid var(--border-color);
     border-radius: 12px;
     background: var(--background-color);
 }
 
 .qr-method-title {
-    margin: 0 0 var(--space-md) 0;
-    font-size: var(--space-lg);
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
     color: var(--primary-color);
     font-weight: var(--font-semibold);
 }
@@ -2497,7 +2495,7 @@ footer {
     color: #888;
     font-size: 0.9rem;
     text-align: center;
-    padding: var(--space-lg);
+    padding: 1rem;
 }
 
 /* Dark mode for profile display */
@@ -2524,21 +2522,21 @@ footer {
     background: var(--card-background);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    padding: var(--space-lg);
-    margin-bottom: var(--space-lg);
+    padding: 1rem;
+    margin-bottom: 1rem;
 }
 
 .form-section h3 {
     margin: 0 0 1rem 0;
     color: var(--primary-color);
-    font-size: var(--space-lg);
+    font-size: 1rem;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 0.5rem;
 }
 
 .form-row {
     display: flex;
-    gap: var(--space-lg);
+    gap: 1rem;
     flex-wrap: wrap;
 }
 
@@ -2550,7 +2548,7 @@ footer {
 /* Cookie Selection Table */
 .cookie-selection-table-container {
     overflow-x: auto;
-    margin-bottom: var(--space-lg);
+    margin-bottom: 1rem;
 }
 
 .cookie-selection-table {
@@ -2561,7 +2559,7 @@ footer {
 
 .cookie-selection-table th,
 .cookie-selection-table td {
-    padding: var(--space-sm);
+    padding: 0.5rem;
     border: 1px solid var(--border-color);
     text-align: center;
 }
@@ -2588,7 +2586,7 @@ footer {
 
 .cookie-selection-table .qty-input {
     width: 70px;
-    padding: var(--space-xs) 0.5rem;
+    padding: 0.25rem 0.5rem;
     text-align: center;
     border: 1px solid var(--border-color);
     border-radius: 4px;
@@ -2625,7 +2623,7 @@ footer {
     font-size: var(--text-xl);
     font-weight: var(--font-semibold);
     color: var(--primary-color);
-    padding: var(--space-sm) 0;
+    padding: 0.5rem 0;
 }
 
 /* Alias for .btn-lg for compatibility */
@@ -2669,12 +2667,12 @@ footer {
 
 /* Inventory Section */
 .inventory-section {
-    padding: var(--space-lg);
-    margin-top: var(--space-lg);
+    padding: 1rem;
+    margin-top: 1rem;
     background: var(--card-background);
     border-radius: 16px;
-    margin-left: var(--space-lg);
-    margin-right: var(--space-lg);
+    margin-left: 1rem;
+    margin-right: 1rem;
 }
 
 .inventory-section h2 {
@@ -2687,7 +2685,7 @@ footer {
     text-align: center;
     color: #666;
     font-size: 0.9rem;
-    margin-bottom: var(--space-lg);
+    margin-bottom: 1rem;
 }
 
 .inventory-grid {
@@ -2755,7 +2753,7 @@ footer {
     text-align: center;
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    font-size: var(--space-lg);
+    font-size: 1rem;
     font-weight: 500;
 }
 
@@ -2800,8 +2798,8 @@ footer {
 
 /* Cookie Details Section */
 .cookie-details-section {
-    padding: var(--space-lg);
-    margin-top: var(--space-lg);
+    padding: 1rem;
+    margin-top: 1rem;
 }
 
 .cookie-details-section h2 {
@@ -2820,7 +2818,7 @@ footer {
 .cookie-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--space-lg);
+    gap: 1rem;
 }
 
 .cookie-detail-card {
@@ -2846,7 +2844,7 @@ footer {
     width: 120px;
     height: 120px;
     object-fit: contain;
-    margin-bottom: var(--space-md);
+    margin-bottom: 0.75rem;
     border-radius: 12px;
 }
 
@@ -2858,13 +2856,13 @@ footer {
 .cookie-detail-card h3 {
     color: var(--primary-color);
     font-size: var(--text-xl);
-    margin: 0 0 var(--space-xs) 0;
+    margin: 0 0 0.25rem 0;
 }
 
 .cookie-alt-name {
     color: #888;
     font-size: 0.85rem;
-    margin: 0 0 var(--space-sm) 0;
+    margin: 0 0 0.5rem 0;
     font-style: italic;
 }
 
@@ -2872,7 +2870,7 @@ footer {
     display: inline-block;
     font-size: 0.7rem;
     font-weight: var(--font-semibold);
-    padding: calc(var(--space-xs) * 0.8) var(--space-sm);
+    padding: 0.2rem 0.5rem;
     border-radius: 4px;
     margin-bottom: 0.5rem;
 }
@@ -2893,7 +2891,7 @@ footer {
     color: white;
     font-size: 0.7rem;
     font-weight: var(--font-semibold);
-    padding: calc(var(--space-xs) * 0.8) var(--space-sm);
+    padding: 0.2rem 0.5rem;
     border-radius: 4px;
     margin-bottom: 0.5rem;
 }
@@ -2904,7 +2902,7 @@ footer {
     color: white;
     font-size: 0.7rem;
     font-weight: var(--font-semibold);
-    padding: calc(var(--space-xs) * 0.8) var(--space-sm);
+    padding: 0.2rem 0.5rem;
     border-radius: 4px;
     margin-bottom: 0.5rem;
 }
@@ -2949,15 +2947,15 @@ footer {
 .payment-summary {
     background: rgba(0, 0, 0, 0.02);
     border-radius: 12px;
-    padding: var(--space-lg);
-    margin-bottom: var(--space-lg);
+    padding: 1rem;
+    margin-bottom: 1rem;
 }
 
 .payment-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-sm) 0;
+    padding: 0.5rem 0;
     border-bottom: 1px solid var(--border-color);
 }
 
@@ -2981,7 +2979,7 @@ footer {
 .payment-row.payment-due-highlight {
     background: rgba(220, 53, 69, 0.1);
     margin: 0 -1rem;
-    padding: var(--space-sm) var(--space-lg);
+    padding: 0.5rem 1rem;
     border-radius: 4px;
 }
 
@@ -2991,8 +2989,8 @@ footer {
 }
 
 .additional-payment-section {
-    margin-top: var(--space-lg);
-    padding-top: var(--space-lg);
+    margin-top: 1rem;
+    padding-top: 1rem;
     border-top: 1px solid var(--border-color);
 }
 
@@ -3011,7 +3009,7 @@ footer {
 
 .currency-prefix {
     background: var(--border-color);
-    padding: var(--space-sm) var(--space-md);
+    padding: 0.5rem 0.75rem;
     border: 1px solid var(--border-color);
     border-right: none;
     border-radius: 4px 0 0 4px;
@@ -3021,10 +3019,10 @@ footer {
 
 .additional-payment-input input {
     flex: 1;
-    padding: var(--space-sm);
+    padding: 0.5rem;
     border: 1px solid var(--border-color);
     border-radius: 0 4px 4px 0;
-    font-size: var(--space-lg);
+    font-size: 1rem;
 }
 
 .additional-payment-input input:focus {
@@ -3079,13 +3077,13 @@ footer {
    ============================================================================ */
 
 .troop-section {
-    padding: var(--space-lg);
+    padding: 1rem;
 }
 
 .troop-header {
     display: flex;
     flex-direction: column;
-    gap: var(--space-lg);
+    gap: 1rem;
     margin-bottom: var(--space-2xl);
 }
 
@@ -3106,7 +3104,7 @@ footer {
     padding: var(--space-md);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    font-size: var(--space-lg);
+    font-size: 1rem;
     background: var(--card-background);
     color: var(--text-color);
 }
@@ -3155,7 +3153,7 @@ footer {
 }
 
 .summary-label {
-    font-size: var(--space-md);
+    font-size: 0.75rem;
     color: #666;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -3165,7 +3163,7 @@ footer {
 /* Tablet and up - horizontal layout */
 @media (min-width: 768px) {
     .summary-card {
-        padding: var(--space-lg);
+        padding: 1rem;
         gap: var(--space-md);
         flex-direction: row;
         align-items: flex-start;
@@ -3181,7 +3179,7 @@ footer {
     }
 
     .summary-label {
-        font-size: var(--space-md);
+        font-size: 0.75rem;
     }
 }
 
@@ -3190,7 +3188,7 @@ footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--space-lg);
+    margin-bottom: 1rem;
 }
 
 .section-header h3 {
@@ -3220,7 +3218,7 @@ footer {
 
 .members-table th,
 .members-table td {
-    padding: var(--space-md) 0.5rem;
+    padding: 0.75rem 0.5rem;
     text-align: left;
     border-bottom: 1px solid var(--border-color);
 }
@@ -3228,7 +3226,7 @@ footer {
 .members-table th {
     font-weight: var(--font-semibold);
     color: #666;
-    font-size: var(--space-md);
+    font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -3252,7 +3250,7 @@ footer {
 
 .role-badge {
     display: inline-block;
-    padding: var(--space-xs) 0.5rem;
+    padding: 0.25rem 0.5rem;
     border-radius: 12px;
     font-size: 0.7rem;
     font-weight: var(--font-semibold);
@@ -3278,13 +3276,13 @@ footer {
 .goals-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-lg);
+    gap: 1rem;
 }
 
 .goal-card {
     background: rgba(30, 123, 60, 0.05);
     border-radius: 12px;
-    padding: var(--space-lg);
+    padding: 1rem;
     border-left: 4px solid var(--primary-color);
 }
 
@@ -3292,7 +3290,7 @@ footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--space-md);
+    margin-bottom: 0.75rem;
 }
 
 .goal-type {
@@ -3302,7 +3300,7 @@ footer {
 
 .goal-status {
     font-size: 0.7rem;
-    padding: var(--space-xs) 0.5rem;
+    padding: 0.25rem 0.5rem;
     border-radius: 12px;
     text-transform: uppercase;
 }
@@ -3320,7 +3318,7 @@ footer {
 .goal-progress {
     display: flex;
     align-items: center;
-    gap: var(--space-lg);
+    gap: 1rem;
 }
 
 .progress-bar {
@@ -3396,7 +3394,7 @@ footer {
 .empty-icon {
     font-size: 4rem;
     display: block;
-    margin-bottom: var(--space-lg);
+    margin-bottom: 1rem;
 }
 
 .empty-state-content h3 {
@@ -3411,7 +3409,7 @@ footer {
 .empty-state {
     color: #999;
     text-align: center;
-    padding: var(--space-3xl);
+    padding: 2rem;
     font-style: italic;
 }
 
@@ -3427,7 +3425,7 @@ footer {
     justify-content: center;
     align-items: center;
     z-index: 1000;
-    padding: var(--space-lg);
+    padding: 1rem;
 }
 
 .modal-content {
@@ -3444,7 +3442,7 @@ footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-lg) 1.25rem;
+    padding: 1rem 1.25rem;
     border-bottom: 1px solid var(--border-color);
 }
 
@@ -3475,7 +3473,7 @@ footer {
     display: flex;
     justify-content: flex-end;
     gap: var(--space-md);
-    padding: var(--space-lg) 1.25rem;
+    padding: 1rem 1.25rem;
     border-top: 1px solid var(--border-color);
 }
 
@@ -3483,7 +3481,7 @@ footer {
 .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: var(--space-lg);
+    gap: 1rem;
 }
 
 /* Search Results */
@@ -3541,11 +3539,11 @@ footer {
 }
 
 .tab-btn {
-    padding: var(--space-md) 1.5rem;
+    padding: 0.75rem 1.5rem;
     border: none;
     background: transparent;
     cursor: pointer;
-    font-size: var(--space-lg);
+    font-size: 1rem;
     color: #666;
     border-bottom: 3px solid transparent;
     transition: all 0.2s;
@@ -3580,7 +3578,7 @@ footer {
 /* Modal Body Headings */
 .modal-body h4 {
     margin-top: 1.5rem;
-    margin-bottom: var(--space-lg);
+    margin-bottom: 1rem;
     color: var(--primary-color);
     font-size: var(--text-xl);
     border-bottom: 1px solid var(--border-color);
@@ -3593,7 +3591,7 @@ footer {
 
 /* Button Small */
 .btn-sm {
-    padding: 0.4rem var(--space-md);
+    padding: 0.4rem 0.75rem;
     font-size: 0.85rem;
 }
 
@@ -3736,7 +3734,7 @@ footer {
     background: none;
     border: none;
     cursor: pointer;
-    padding: var(--space-sm);
+    padding: 0.5rem;
     font-size: 1.25rem;
     display: flex;
     align-items: center;
@@ -3767,23 +3765,23 @@ footer {
 .invitations-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-lg);
+    gap: 1rem;
 }
 
 .invitation-item {
-    padding: var(--space-lg);
+    padding: 1rem;
     background: var(--card-background, #f5f5f5);
     border-radius: 16px;
     border-left: 4px solid #4CAF50;
 }
 
 .invitation-item h4 {
-    margin: 0 0 var(--space-sm) 0;
+    margin: 0 0 0.5rem 0;
     color: var(--text-color);
 }
 
 .invitation-item p {
-    margin: 0 0 var(--space-md) 0;
+    margin: 0 0 0.75rem 0;
     color: var(--text-secondary, #666);
     font-size: 0.9rem;
 }
@@ -3791,7 +3789,7 @@ footer {
 .invitation-item .invitation-meta {
     font-size: 0.8rem;
     color: var(--text-secondary, #999);
-    margin-bottom: var(--space-md);
+    margin-bottom: 0.75rem;
 }
 
 .invitation-actions {
@@ -3827,17 +3825,17 @@ footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--space-lg);
+    margin-bottom: 1rem;
 }
 
 .troop-leaderboard-section h3 {
     margin: 0;
-    font-size: var(--space-lg);
+    font-size: 1rem;
     color: var(--text-color);
 }
 
 .metric-select {
-    padding: calc(var(--space-xs) + 0.1rem) var(--space-sm);
+    padding: 0.35rem 0.5rem;
     border-radius: 12px;
     border: 1px solid var(--border-color, #ddd);
     font-size: 0.8rem;
@@ -3856,7 +3854,7 @@ footer {
     display: flex;
     align-items: center;
     gap: var(--space-md);
-    padding: calc(var(--space-sm) + 0.15rem);
+    padding: 0.65rem;
     background: var(--background-color, #f5f5f5);
     border-radius: 12px;
     transition: transform 0.2s, background 0.2s;
@@ -3931,26 +3929,26 @@ footer {
 
 .nutrition-facts {
     border: 2px solid #333;
-    padding: var(--space-sm) 1rem var(--space-lg);
+    padding: 0.5rem 1rem 1rem;
     background: white;
 }
 
 .nutrition-facts h4 {
     font-size: var(--text-4xl);
     font-weight: 900;
-    margin: 0 0 var(--space-xs) 0;
+    margin: 0 0 0.25rem 0;
     color: #333;
 }
 
 .serving-size {
     font-size: 0.85rem;
-    margin: 0 0 var(--space-sm) 0;
+    margin: 0 0 0.5rem 0;
     color: #333;
 }
 
 .nutrition-divider {
     border-top: 1px solid #333;
-    margin: var(--space-sm) 0;
+    margin: 0.5rem 0;
 }
 
 .nutrition-divider.thick {
@@ -3964,7 +3962,7 @@ footer {
 }
 
 .nutrition-table td {
-    padding: var(--space-xs) 0;
+    padding: 0.25rem 0;
     font-size: 0.85rem;
     border-bottom: 1px solid #ddd;
 }
@@ -3975,13 +3973,13 @@ footer {
 }
 
 .nutrition-table .nutrient-indent {
-    padding-left: var(--space-lg);
+    padding-left: 1rem;
 }
 
 .ingredients {
-    margin-top: var(--space-md);
+    margin-top: 0.75rem;
     padding-top: 0.5rem;
-    font-size: var(--space-md);
+    font-size: 0.75rem;
     line-height: 1.4;
     color: #333;
 }
@@ -3994,16 +3992,16 @@ footer {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    margin-top: var(--space-lg);
+    margin-top: 1rem;
 }
 
 .cookie-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    padding: calc(var(--space-xs) + 0.1rem) calc(var(--space-sm) + 0.15rem);
+    padding: 0.35rem 0.65rem;
     border-radius: 20px;
-    font-size: var(--space-md);
+    font-size: 0.75rem;
     font-weight: var(--font-semibold);
 }
 
@@ -4029,8 +4027,8 @@ footer {
 .goal-card {
     background: rgba(76, 175, 80, 0.08);
     border-radius: 12px;
-    padding: var(--space-lg);
-    margin-bottom: var(--space-md);
+    padding: 1rem;
+    margin-bottom: 0.75rem;
 }
 
 .goal-card .goal-header {
@@ -4055,7 +4053,7 @@ footer {
     background: #e0e0e0;
     border-radius: 4px;
     overflow: hidden;
-    margin: var(--space-sm) 0;
+    margin: 0.5rem 0;
 }
 
 .goal-card .progress-fill {
@@ -4066,7 +4064,7 @@ footer {
 }
 
 .goal-card .goal-dates {
-    font-size: var(--space-md);
+    font-size: 0.75rem;
     color: var(--text-secondary, #888);
 }
 
@@ -4154,7 +4152,7 @@ footer {
 
 /* Council View */
 .council-section {
-    padding: var(--space-lg);
+    padding: 1rem;
 }
 
 .council-section .section-description {
@@ -4165,7 +4163,7 @@ footer {
 .council-actions {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--space-lg);
+    gap: 1rem;
 }
 
 .council-card {
@@ -4176,394 +4174,11 @@ footer {
 }
 
 .council-card h3 {
-    margin: 0 0 var(--space-sm) 0;
+    margin: 0 0 0.5rem 0;
 }
 
 .council-card p {
     color: var(--text-secondary);
     margin: 0 0 1rem 0;
     font-size: 0.9rem;
-}
-
-/* ============================================================================
-   RESPONSIVE DESIGN SYSTEM - CONSOLIDATED MEDIA QUERIES
-   ============================================================================ */
-
-/* Mobile refinements (< 768px) */
-@media (max-width: 767px) {
-    /* Stack forms and grids on mobile */
-    .form-row {
-        grid-template-columns: 1fr;
-    }
-    
-    /* Single column layouts */
-    .summary-cards,
-    .cookie-sales-grid,
-    .inventory-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    /* Hide non-essential table columns on mobile */
-    .members-table th:nth-child(4),
-    .members-table td:nth-child(4),
-    .members-table th:nth-child(5),
-    .members-table td:nth-child(5) {
-        display: none;
-    }
-    
-    /* Stack membership actions */
-    .membership-actions {
-        flex-direction: column;
-    }
-    
-    .membership-actions button,
-    .membership-actions input {
-        width: 100%;
-    }
-    
-    /* Small text for mobile */
-    .membership-subtab {
-        padding: calc(var(--space-xs) + 0.1rem) calc(var(--space-sm) + 0.15rem);
-        font-size: var(--text-md);
-    }
-    
-    /* Extra small on very small phones */
-    @media (max-width: 480px) {
-        section {
-            padding: var(--space-md);
-        }
-        
-        h2 {
-            font-size: var(--text-2xl);
-        }
-        
-        .btn {
-            font-size: var(--text-base);
-            padding: var(--space-md);
-            min-height: 44px;
-        }
-    }
-}
-
-/* Tablet (768px - 1023px) */
-@media (min-width: 768px) and (max-width: 1023px) {
-    /* 2-column layouts on tablet */
-    .summary-cards,
-    .cookie-sales-grid,
-    .inventory-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    /* Side-by-side forms on tablet */
-    .form-row {
-        grid-template-columns: 1fr 1fr;
-    }
-    
-    /* Slightly larger text on tablet */
-    .membership-subtab {
-        padding: calc(var(--space-xs) + 0.1rem) calc(var(--space-sm) + 0.15rem);
-        font-size: var(--text-md);
-    }
-}
-
-/* Desktop (1024px+) */
-@media (min-width: 1024px) {
-    /* Larger typography on desktop */
-    header h1 {
-        font-size: var(--text-5xl);
-    }
-    
-    section {
-        padding: var(--space-3xl);
-    }
-    
-    /* 4-column summary cards on desktop */
-    .summary-cards {
-        grid-template-columns: repeat(4, 1fr);
-    }
-    
-    /* 3-column grids on desktop */
-    .inventory-grid,
-    .cookie-sales-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-    
-    /* Larger buttons on desktop */
-    .membership-subtab {
-        padding: calc(var(--space-xs) + 0.1rem) calc(var(--space-sm) + 0.15rem);
-        font-size: var(--text-md);
-    }
-}
-
-/* ============================================================================
-   PHASE 3.1: SCOUT PROFILE STYLES
-   ============================================================================ */
-
-.scout-level-badge-container {
-    margin-top: var(--space-md);
-    display: flex;
-    justify-content: center;
-}
-
-.scout-level-badge {
-    padding: var(--space-md) var(--space-lg);
-    border-radius: var(--radius-lg);
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 100%);
-    border: 2px solid #ddd;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    min-width: 200px;
-}
-
-.badge-content {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-}
-
-.badge-level-name {
-    font-size: var(--text-lg);
-    font-weight: 700;
-    color: #333;
-}
-
-.badge-org-name {
-    font-size: var(--text-sm);
-    color: #666;
-    font-weight: 500;
-}
-
-/* Scout level badge colors - Girl Scout levels */
-.scout-level-badge.daisy-level {
-    border-color: #A0DEF1;
-    background: linear-gradient(135deg, rgba(160, 222, 241, 0.15) 0%, rgba(160, 222, 241, 0.05) 100%);
-    color: #1a5f7a;
-}
-
-.scout-level-badge.brownie-level {
-    border-color: #763A16;
-    background: linear-gradient(135deg, rgba(118, 58, 22, 0.15) 0%, rgba(118, 58, 22, 0.05) 100%);
-    color: #3d1d0b;
-}
-
-.scout-level-badge.junior-level {
-    border-color: #00B2BE;
-    background: linear-gradient(135deg, rgba(0, 178, 190, 0.15) 0%, rgba(0, 178, 190, 0.05) 100%);
-    color: #005a63;
-}
-
-.scout-level-badge.cadette-level {
-    border-color: #EE3124;
-    background: linear-gradient(135deg, rgba(238, 49, 36, 0.15) 0%, rgba(238, 49, 36, 0.05) 100%);
-    color: #991f15;
-}
-
-.scout-level-badge.senior-level {
-    border-color: #FF7818;
-    background: linear-gradient(135deg, rgba(255, 120, 24, 0.15) 0%, rgba(255, 120, 24, 0.05) 100%);
-    color: #994700;
-}
-
-.scout-level-badge.ambassador-level {
-    border-color: #EE3124;
-    background: linear-gradient(135deg, rgba(238, 49, 36, 0.15) 0%, rgba(238, 49, 36, 0.05) 100%);
-    color: #991f15;
-}
-
-/* ============================================================================
-   SPECIAL MEDIA QUERIES
-   ============================================================================ */
-
-/* Touch devices - remove hover states that don't apply */
-@media (hover: none) and (pointer: coarse) {
-    .btn:hover {
-        background-color: inherit;
-    }
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-    body {
-        border: 1px solid var(--text-color);
-    }
-    
-    .btn {
-        border: 2px solid currentColor;
-    }
-}
-
-/* Print styles */
-@media print {
-    .tab-nav,
-    .header-actions,
-    .btn {
-        display: none;
-    }
-    
-    body {
-        font-size: 12pt;
-        color: black;
-    }
-}
-
-
-/* Calendar Styles */
-.calendar-controls-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.calendar-actions {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.calendar-filter-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    padding: 1rem;
-    background-color: var(--card-background);
-    border-radius: 8px;
-    margin-bottom: 1rem;
-    align-items: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.filter-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    font-size: 0.9rem;
-    cursor: pointer;
-}
-
-.calendar-section {
-    background-color: var(--card-background);
-    border-radius: 8px;
-    padding: 1rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.calendar-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.calendar-nav-group {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.calendar-nav-btn {
-    background: none;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    padding: 0.2rem 0.6rem;
-    cursor: pointer;
-    font-size: 1.2rem;
-}
-
-.calendar-today-btn {
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 0.4rem 0.8rem;
-    cursor: pointer;
-}
-
-.calendar-weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    text-align: center;
-    font-weight: bold;
-    margin-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 0.5rem;
-}
-
-.calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    grid-auto-rows: minmax(100px, auto);
-    gap: 1px;
-    background-color: var(--border-color); /* Creates borders */
-    border: 1px solid var(--border-color);
-}
-
-.calendar-day {
-    background-color: var(--card-background);
-    padding: 0.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    min-height: 100px;
-}
-
-.calendar-day.other-month {
-    background-color: #f9f9f9;
-    color: #999;
-}
-
-.calendar-day.today {
-    background-color: #f0f7f0; /* Light green tint */
-}
-
-.calendar-date-num {
-    font-weight: bold;
-    font-size: 0.9rem;
-    margin-bottom: 0.2rem;
-}
-
-.calendar-event {
-    font-size: 0.75rem;
-    padding: 2px 4px;
-    border-radius: 4px;
-    color: white;
-    cursor: pointer;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 2px;
-}
-
-/* Event Colors */
-.event-Lion { background-color: #FFD700; color: #333; } /* Gold - dark text */
-.event-Tiger { background-color: #F96302; }
-.event-Wolf { background-color: #F00000; }
-.event-Bear { background-color: #00B5E2; }
-.event-Webelos { background-color: #005F52; }
-.event-AOL { background-color: #582800; }
-.event-Troop, .event-Pack { background-color: #D6CEBD; color: #333; }
-.event-GS { background-color: #00b451; }
-.event-Daisy { background-color: #00b451; }
-.event-Brownie { background-color: #00b451; }
-.event-Junior { background-color: #00b451; }
-.event-Cadette { background-color: #00b451; }
-.event-Senior { background-color: #00b451; }
-.event-Ambassador { background-color: #00b451; }
-
-/* Responsive Grid for Mobile */
-@media (max-width: 600px) {
-    .calendar-weekdays, .calendar-grid {
-        font-size: 0.8rem;
-    }
-    .calendar-grid {
-        grid-auto-rows: minmax(60px, auto);
-    }
-    .calendar-event {
-        font-size: 0.65rem;
-        padding: 1px 2px;
-    }
-    .calendar-controls-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
 }

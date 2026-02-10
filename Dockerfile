@@ -18,6 +18,7 @@ COPY logger.js ./
 COPY auth.js ./
 COPY passport-config.js ./
 COPY database/ ./database/
+COPY migrations/ ./migrations/
 COPY public/ ./public/
 
 # Create entrypoint script to handle PUID, PGID, and UMASK

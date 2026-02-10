@@ -38,7 +38,7 @@
             </button>
             <button class="tab-btn" data-view="events">
                 <span class="tab-icon">📅</span>
-                <span class="tab-label">Events</span>
+                <span class="tab-label">Calendar</span>
             </button>
             <button class="tab-btn" data-view="settings">
                 <span class="tab-icon">⚙️</span>
@@ -63,13 +63,23 @@
             <!-- Profile View -->
                 <!-- Add Sale Form -->
                 <section class="add-sale-section">
-                    <h2>Sales</h2>
+                    
             <div id="view-profile" class="view-section">
                 <section class="profile-display-section">
                     <div class="profile-card">
                         <div class="profile-photo-display">
                             <img id="profilePhotoDisplay" src="" alt="Profile Photo" class="profile-photo-large" style="display:none;">
                             <div id="profilePhotoPlaceholderDisplay" class="profile-photo-placeholder-large">👤</div>
+                        </div>
+
+                        <!-- Scout Level Badge (Phase 3.1) -->
+                        <div id="scoutLevelBadgeContainer" class="scout-level-badge-container" style="display:none;">
+                            <div id="scoutLevelBadge" class="scout-level-badge">
+                                <div class="badge-content">
+                                    <span id="scoutLevelName" class="badge-level-name"></span>
+                                    <span id="scoutOrgName" class="badge-org-name"></span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -439,52 +449,75 @@
 
             <!-- Events View -->
             <div id="view-events" class="view-section hidden">
-                <!-- Add Event Form -->
-                <section class="add-event-section">
-                    <h2>Record a Booth/Event</h2>
+                <div class="calendar-controls-header">
+                    <h2>Calendar</h2>
+                    <div class="calendar-actions">
+                        <button class="btn btn-secondary" onclick="exportCalendar()">Export .ics</button>
+                        <button class="btn btn-primary" onclick="toggleAddEventForm()">+ Add Event</button>
+                    </div>
+                </div>
+
+                <!-- Add Event Form (Hidden by default) -->
+                <section id="addEventSection" class="add-event-section hidden">
+                    <h3>Record Event</h3>
                     <form id="eventForm">
                         <div class="form-section">
                             <div class="form-group">
                                 <label for="eventName">Event Name *</label>
-                                <input type="text" id="eventName" placeholder="e.g., Cookie Booth at Walmart" required>
+                                <input type="text" id="eventName" placeholder="e.g., Pack Meeting" required>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="eventDate">Date *</label>
-                                    <input type="datetime-local" id="eventDate" required>
+                                    <input type="date" id="eventDate" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="eventDescription">Description</label>
-                                    <input type="text" id="eventDescription" placeholder="Optional description">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-section">
-                            <h3>Inventory</h3>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="initialBoxes">Initial Boxes</label>
-                                    <input type="number" id="initialBoxes" min="0" value="0">
-                                </div>
-                                <div class="form-group">
-                                    <label for="initialCases">Initial Cases</label>
-                                    <input type="number" id="initialCases" min="0" value="0">
+                                    <label for="eventType">Type</label>
+                                    <select id="eventType">
+                                        <option value="event">General</option>
+                                        <option value="meeting">Meeting</option>
+                                        <option value="booth">Booth</option>
+                                        <option value="outing">Outing</option>
+                                    </select>
                                 </div>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="remainingBoxes">Remaining Boxes</label>
-                                    <input type="number" id="remainingBoxes" min="0" value="0">
+                                    <label for="eventStartTime">Start Time</label>
+                                    <input type="time" id="eventStartTime">
                                 </div>
                                 <div class="form-group">
-                                    <label for="remainingCases">Remaining Cases</label>
-                                    <input type="number" id="remainingCases" min="0" value="0">
+                                    <label for="eventEndTime">End Time</label>
+                                    <input type="time" id="eventEndTime">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="eventLocation">Location</label>
+                                    <input type="text" id="eventLocation" placeholder="Location">
+                                </div>
+                                <div class="form-group">
+                                    <label for="targetGroup">Group</label>
+                                    <select id="targetGroup">
+                                        <option value="Troop">Whole Troop/Pack</option>
+                                        <option value="Lion">Lion</option>
+                                        <option value="Tiger">Tiger</option>
+                                        <option value="Wolf">Wolf</option>
+                                        <option value="Bear">Bear</option>
+                                        <option value="Webelos">Webelos</option>
+                                        <option value="AOL">AOL</option>
+                                        <option value="Daisy">Daisy</option>
+                                        <option value="Brownie">Brownie</option>
+                                        <option value="Junior">Junior</option>
+                                        <option value="Cadette">Cadette</option>
+                                        <option value="Senior">Senior</option>
+                                        <option value="Ambassador">Ambassador</option>
+                                    </select>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="eventDonations">Donations Received ($)</label>
-                                <input type="number" id="eventDonations" min="0" step="0.01" value="0">
+                                <label for="eventDescription">Description</label>
+                                <input type="text" id="eventDescription" placeholder="Optional description">
                             </div>
                         </div>
 
@@ -492,36 +525,33 @@
                     </form>
                 </section>
 
-                <!-- Events List -->
-                <section class="events-list-section">
-                    <h2>Events</h2>
-                    <div id="eventsList" class="events-list">
-                        <p class="empty-message">No events recorded yet.</p>
-                    </div>
-                </section>
+                <!-- Filters -->
+                <div class="calendar-filter-bar">
+                    <span class="filter-label">Show:</span>
+                    <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="Lion" checked> Lion</label>
+                    <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="Tiger" checked> Tiger</label>
+                    <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="Wolf" checked> Wolf</label>
+                    <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="Bear" checked> Bear</label>
+                    <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="Webelos" checked> Webelos</label>
+                    <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="AOL" checked> AOL</label>
+                    <label class="filter-checkbox"><input type="checkbox" class="event-filter" value="Troop" checked> Pack/Troop</label>
+                </div>
 
-                <!-- Donations Section -->
-                <section class="donations-section">
-                    <h2>Donations</h2>
-                    <div class="donations-summary">
-                        <span>Total Donations: </span>
-                        <span id="totalDonations">$0.00</span>
-                    </div>
-                    <form id="donationForm">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="donorName">Donor Name</label>
-                                <input type="text" id="donorName" placeholder="e.g., Anonymous">
-                            </div>
-                            <div class="form-group">
-                                <label for="donationAmount">Amount ($) *</label>
-                                <input type="number" id="donationAmount" min="0.01" step="0.01" required placeholder="0.00">
-                            </div>
+                <!-- Calendar -->
+                <section class="calendar-section">
+                    <div class="calendar-header">
+                        <div class="calendar-nav-group">
+                            <button class="calendar-nav-btn" onclick="changeMonth(-1)">&lt;</button>
+                            <h3 id="calendarMonthYear">Month Year</h3>
+                            <button class="calendar-nav-btn" onclick="changeMonth(1)">&gt;</button>
                         </div>
-                        <button type="submit" class="btn btn-primary">Add Donation</button>
-                    </form>
-                    <div id="donationsList" class="donations-list">
-                        <p class="empty-message">No donations recorded yet.</p>
+                        <button class="calendar-today-btn" onclick="goToToday()">Today</button>
+                    </div>
+                    <div class="calendar-weekdays">
+                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                    </div>
+                    <div id="calendarGrid" class="calendar-grid">
+                        <!-- Days generated by JS -->
                     </div>
                 </section>
             </div>

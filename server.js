@@ -83,6 +83,26 @@ const PORT = process.env.PORT || 3000;
             CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL
         `).catch(() => {});
 
+        // Add Calendar fields to events table
+        await db.query(`
+            ALTER TABLE events ADD COLUMN IF NOT EXISTS "eventType" VARCHAR(50) DEFAULT 'event'
+        `).catch(() => {});
+        await db.query(`
+            ALTER TABLE events ADD COLUMN IF NOT EXISTS "startTime" VARCHAR(10)
+        `).catch(() => {});
+        await db.query(`
+            ALTER TABLE events ADD COLUMN IF NOT EXISTS "endTime" VARCHAR(10)
+        `).catch(() => {});
+        await db.query(`
+            ALTER TABLE events ADD COLUMN IF NOT EXISTS "location" TEXT
+        `).catch(() => {});
+        await db.query(`
+            ALTER TABLE events ADD COLUMN IF NOT EXISTS "targetGroup" VARCHAR(50) DEFAULT 'Troop'
+        `).catch(() => {});
+        await db.query(`
+            CREATE INDEX IF NOT EXISTS idx_events_troopId_date ON events("troopId", "eventDate")
+        `).catch(() => {});
+
         logger.info('Schema migration checks completed');
     } catch (err) {
         logger.warn('Schema migration checks had issues (non-fatal)', { error: err.message });
@@ -433,6 +453,17 @@ app.get('/api/auth/me', auth.isAuthenticated, async (req, res) => {
         // Hardcoded superuser privilege for welefort@gmail.com
         if (user.email === 'welefort@gmail.com') {
             user.role = 'council_admin';
+        }
+
+        // Get troop info
+        const membership = await db.getOne(`
+            SELECT "troopId" FROM troop_members
+            WHERE "userId" = $1 AND status = 'active'
+            LIMIT 1
+        `, [req.session.userId]);
+
+        if (membership) {
+            user.troopId = membership.troopId;
         }
 
         res.json(user);
@@ -863,7 +894,13 @@ app.post('/api/events', auth.isAuthenticated, async (req, res) => {
             initialCases,
             remainingBoxes,
             remainingCases,
-            donationsReceived
+            donationsReceived,
+            troopId,
+            eventType,
+            startTime,
+            endTime,
+            location,
+            targetGroup
         } = req.body;
 
         if (!eventName || !eventDate) {
@@ -892,20 +929,33 @@ app.post('/api/events', auth.isAuthenticated, async (req, res) => {
         const validDonationsReceived = (typeof donationsReceived === 'number' && donationsReceived >= 0) ? donationsReceived : 0;
         const sanitizedDescription = (description && description.trim()) || null;
 
+        // Verify troop membership if troopId is provided
+        if (troopId) {
+            const membership = await db.getOne(
+                'SELECT * FROM troop_members WHERE "troopId" = $1 AND "userId" = $2 AND status = \'active\'',
+                [troopId, req.session.userId]
+            );
+            if (!membership && req.session.userRole !== 'council_admin') {
+                return res.status(403).json({ error: 'You are not an active member of this troop' });
+            }
+        }
+
         const newEvent = await db.getOne(`
             INSERT INTO events (
                 "eventName", "eventDate", description,
                 "initialBoxes", "initialCases", "remainingBoxes", "remainingCases",
-                "donationsReceived", "userId"
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                "donationsReceived", "userId", "troopId",
+                "eventType", "startTime", "endTime", "location", "targetGroup"
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             RETURNING *
         `, [
             sanitizedEventName, validEventDate, sanitizedDescription,
             validInitialBoxes, validInitialCases, validRemainingBoxes, validRemainingCases,
-            validDonationsReceived, req.session.userId
+            validDonationsReceived, req.session.userId, troopId || null,
+            eventType || 'event', startTime || null, endTime || null, location || null, targetGroup || 'Troop'
         ]);
 
-        logger.info('Event added successfully', { eventId: newEvent.id, eventName: sanitizedEventName, userId: req.session.userId });
+        logger.info('Event added successfully', { eventId: newEvent.id, eventName: sanitizedEventName, userId: req.session.userId, troopId });
         res.status(201).json(newEvent);
     } catch (error) {
         logger.error('Error adding event', { error: error.message, stack: error.stack });
@@ -925,7 +975,12 @@ app.put('/api/events/:id', auth.isAuthenticated, async (req, res) => {
             initialCases,
             remainingBoxes,
             remainingCases,
-            donationsReceived
+            donationsReceived,
+            eventType,
+            startTime,
+            endTime,
+            location,
+            targetGroup
         } = req.body;
 
         // Check ownership
@@ -973,12 +1028,18 @@ app.put('/api/events/:id', auth.isAuthenticated, async (req, res) => {
                 "initialCases" = $5,
                 "remainingBoxes" = $6,
                 "remainingCases" = $7,
-                "donationsReceived" = $8
+                "donationsReceived" = $8,
+                "eventType" = COALESCE($10, "eventType"),
+                "startTime" = COALESCE($11, "startTime"),
+                "endTime" = COALESCE($12, "endTime"),
+                "location" = COALESCE($13, "location"),
+                "targetGroup" = COALESCE($14, "targetGroup")
             WHERE id = $9
         `, [
             sanitizedEventName, validEventDate, sanitizedDescription,
             validInitialBoxes, validInitialCases, validRemainingBoxes, validRemainingCases,
-            validDonationsReceived, id
+            validDonationsReceived, id,
+            eventType, startTime, endTime, location, targetGroup
         ]);
 
         const updatedEvent = await db.getOne('SELECT * FROM events WHERE id = $1', [id]);
@@ -1423,6 +1484,98 @@ app.get('/api/troop/:troopId/sales', auth.isAuthenticated, async (req, res) => {
     } catch (error) {
         logger.error('Error fetching troop sales', { error: error.message });
         res.status(500).json({ error: 'Failed to fetch troop sales' });
+    }
+});
+
+// Get troop events (Calendar)
+app.get('/api/troop/:troopId/events', auth.isAuthenticated, async (req, res) => {
+    try {
+        const { troopId } = req.params;
+        const { start, end } = req.query; // Optional date range filtering
+
+        // Verify user has access to this troop
+        const member = await db.getOne('SELECT * FROM troop_members WHERE "troopId" = $1 AND "userId" = $2 AND status = \'active\'', [troopId, req.session.userId]);
+        
+        // Also allow if leader or admin
+        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
+        
+        const isLeader = troop && (troop.leaderId === req.session.userId || troop.cookieLeaderId === req.session.userId);
+        const isAdmin = req.session.userRole === 'council_admin';
+        
+        if (!member && !isLeader && !isAdmin) {
+             return res.status(403).json({ error: 'Access denied' });
+        }
+
+        let query = 'SELECT * FROM events WHERE "troopId" = $1';
+        const params = [troopId];
+        
+        if (start && end) {
+            query += ' AND "eventDate" BETWEEN $2 AND $3';
+            params.push(start, end);
+        }
+        
+        query += ' ORDER BY "eventDate" ASC, "startTime" ASC';
+
+        const events = await db.getAll(query, params);
+        res.json(events);
+    } catch (error) {
+        logger.error('Error fetching troop events', { error: error.message, stack: error.stack });
+        res.status(500).json({ error: 'Failed to fetch events' });
+    }
+});
+
+// Export troop events to .ics
+app.get('/api/troop/:troopId/calendar/export', auth.isAuthenticated, async (req, res) => {
+    try {
+        const { troopId } = req.params;
+        
+        const member = await db.getOne('SELECT * FROM troop_members WHERE "troopId" = $1 AND "userId" = $2 AND status = \'active\'', [troopId, req.session.userId]);
+        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
+        const isLeader = troop && (troop.leaderId === req.session.userId || troop.cookieLeaderId === req.session.userId);
+        const isAdmin = req.session.userRole === 'council_admin';
+
+        if (!member && !isLeader && !isAdmin) {
+             return res.status(403).json({ error: 'Access denied' });
+        }
+
+        const events = await db.getAll('SELECT * FROM events WHERE "troopId" = $1 ORDER BY "eventDate" ASC', [troopId]);
+
+        let icsContent = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Apex Scout Manager//Troop Calendar//EN\r\n';
+        
+        events.forEach(event => {
+            icsContent += 'BEGIN:VEVENT\r\n';
+            
+            // Format timestamps (YYYYMMDDTHHmmssZ)
+            const dateStr = new Date(event.eventDate).toISOString().replace(/[-:]/g, '').split('T')[0];
+            
+            if (event.startTime) {
+                const timeStr = event.startTime.replace(':', '') + '00';
+                icsContent += `DTSTART:${dateStr}T${timeStr}\r\n`;
+            } else {
+                icsContent += `DTSTART;VALUE=DATE:${dateStr}\r\n`;
+            }
+            
+            if (event.endTime) {
+                const timeStr = event.endTime.replace(':', '') + '00';
+                icsContent += `DTEND:${dateStr}T${timeStr}\r\n`;
+            }
+
+            icsContent += `SUMMARY:${event.eventName} (${event.targetGroup})\r\n`;
+            if (event.description) icsContent += `DESCRIPTION:${event.description}\r\n`;
+            if (event.location) icsContent += `LOCATION:${event.location}\r\n`;
+            
+            icsContent += 'END:VEVENT\r\n';
+        });
+
+        icsContent += 'END:VCALENDAR';
+
+        res.setHeader('Content-Type', 'text/calendar');
+        res.setHeader('Content-Disposition', `attachment; filename="troop-${troopId}-calendar.ics"`);
+        res.send(icsContent);
+
+    } catch (error) {
+        logger.error('Error exporting calendar', { error: error.message });
+        res.status(500).json({ error: 'Failed to export calendar' });
     }
 });
 
@@ -2782,6 +2935,416 @@ app.post('/api/troop/:troopId/roster/import', auth.isAuthenticated, upload.singl
     } catch (error) {
         logger.error('Error importing roster', { error: error.message });
         res.status(500).json({ error: 'Failed to import roster' });
+    }
+});
+
+// ==============================================
+// PHASE 3.1: SCOUT PROFILE MANAGEMENT ENDPOINTS
+// ==============================================
+
+// GET /api/organizations
+// List all scout organizations
+app.get('/api/organizations', auth.isAuthenticated, async (req, res) => {
+    try {
+        const organizations = await db.getAll(`
+            SELECT * FROM scout_organizations
+            WHERE "isActive" = $1
+            ORDER BY "orgName"
+        `, [true]);
+
+        logger.info('Organizations fetched', { count: organizations.length, userId: req.session.userId });
+        res.json(organizations);
+    } catch (error) {
+        logger.error('Error fetching organizations', { error: error.message, userId: req.session.userId });
+        res.status(500).json({ error: 'Failed to fetch organizations' });
+    }
+});
+
+// GET /api/organizations/:orgCode
+// Get organization details
+app.get('/api/organizations/:orgCode', auth.isAuthenticated, async (req, res) => {
+    try {
+        const { orgCode } = req.params;
+
+        const organization = await db.getOne(`
+            SELECT * FROM scout_organizations WHERE "orgCode" = $1
+        `, [orgCode]);
+
+        if (!organization) {
+            return res.status(404).json({ error: 'Organization not found' });
+        }
+
+        logger.info('Organization fetched', { orgCode, userId: req.session.userId });
+        res.json(organization);
+    } catch (error) {
+        logger.error('Error fetching organization', { error: error.message, userId: req.session.userId });
+        res.status(500).json({ error: 'Failed to fetch organization' });
+    }
+});
+
+// GET /api/organizations/:orgCode/levels
+// Get scout levels for organization
+app.get('/api/organizations/:orgCode/levels', auth.isAuthenticated, async (req, res) => {
+    try {
+        const { orgCode } = req.params;
+
+        const levels = await db.getAll(`
+            SELECT sl.*
+            FROM scout_levels sl
+            JOIN level_systems ls ON ls.id = sl."levelSystemId"
+            JOIN scout_organizations so ON so.id = ls."organizationId"
+            WHERE so."orgCode" = $1
+              AND sl."isActive" = $2
+            ORDER BY sl."sortOrder"
+        `, [orgCode, true]);
+
+        if (levels.length === 0) {
+            return res.status(404).json({ error: 'Organization or levels not found' });
+        }
+
+        logger.info('Levels fetched', { orgCode, count: levels.length, userId: req.session.userId });
+        res.json(levels);
+    } catch (error) {
+        logger.error('Error fetching levels', { error: error.message, userId: req.session.userId });
+        res.status(500).json({ error: 'Failed to fetch levels' });
+    }
+});
+
+// GET /api/organizations/:orgCode/colors
+// Get color palette for organization
+app.get('/api/organizations/:orgCode/colors', auth.isAuthenticated, async (req, res) => {
+    try {
+        const { orgCode } = req.params;
+
+        const colors = await db.getAll(`
+            SELECT cd.*
+            FROM color_definitions cd
+            JOIN color_palettes cp ON cp.id = cd."paletteId"
+            JOIN scout_organizations so ON so.id = cp."organizationId"
+            WHERE so."orgCode" = $1
+            ORDER BY cd."colorName"
+        `, [orgCode]);
+
+        if (colors.length === 0) {
+            return res.status(404).json({ error: 'Organization colors not found' });
+        }
+
+        logger.info('Colors fetched', { orgCode, count: colors.length, userId: req.session.userId });
+        res.json(colors);
+    } catch (error) {
+        logger.error('Error fetching colors', { error: error.message, userId: req.session.userId });
+        res.status(500).json({ error: 'Failed to fetch colors' });
+    }
+});
+
+// GET /api/scouts/:userId/profile
+// Get scout profile with organization and level details
+app.get('/api/scouts/:userId/profile', auth.isAuthenticated, async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        // Check access: own profile or troop leader/council admin
+        if (req.session.userId !== userId &&
+            !['troop_leader', 'council_admin'].includes(req.session.userRole)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
+        const profile = await db.getOne(`
+            SELECT
+                sp.*,
+                so."orgName",
+                so."orgCode",
+                sl."displayName" as "levelName",
+                sl."levelCode",
+                sl."uniformColor",
+                sl."gradeRange",
+                sl."ageRange",
+                t."troopNumber",
+                t."troopName",
+                u."firstName",
+                u."lastName",
+                u."email"
+            FROM scout_profiles sp
+            JOIN scout_organizations so ON so.id = sp."organizationId"
+            LEFT JOIN scout_levels sl ON sl.id = sp."currentLevelId"
+            LEFT JOIN troops t ON t.id = sp."troopId"
+            LEFT JOIN users u ON u.id = sp."userId"
+            WHERE sp."userId" = $1
+        `, [userId]);
+
+        if (!profile) {
+            return res.status(404).json({ error: 'Scout profile not found' });
+        }
+
+        logger.info('Scout profile fetched', { userId, orgCode: profile.orgCode });
+        res.json(profile);
+    } catch (error) {
+        logger.error('Error fetching scout profile', { error: error.message, userId: req.params.userId });
+        res.status(500).json({ error: 'Failed to fetch scout profile' });
+    }
+});
+
+// PUT /api/scouts/:userId/level
+// Update scout level (troop leaders and council admins only)
+app.put('/api/scouts/:userId/level', auth.isAuthenticated, auth.hasRole('troop_leader', 'council_admin'), async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { levelId } = req.body;
+
+        if (!levelId) {
+            return res.status(400).json({ error: 'levelId is required' });
+        }
+
+        // Verify the level exists
+        const level = await db.getOne(`SELECT id FROM scout_levels WHERE id = $1`, [levelId]);
+        if (!level) {
+            return res.status(404).json({ error: 'Level not found' });
+        }
+
+        // Verify the scout profile exists
+        const profile = await db.getOne(`SELECT id FROM scout_profiles WHERE "userId" = $1`, [userId]);
+        if (!profile) {
+            return res.status(404).json({ error: 'Scout profile not found' });
+        }
+
+        const updated = await db.getOne(`
+            UPDATE scout_profiles
+            SET "currentLevelId" = $1,
+                "levelSince" = $2,
+                "updatedAt" = CURRENT_TIMESTAMP
+            WHERE "userId" = $3
+            RETURNING *
+        `, [levelId, new Date().toISOString().split('T')[0], userId]);
+
+        logger.info('Scout level updated', { userId, levelId, updatedBy: req.session.userId });
+        res.json(updated);
+    } catch (error) {
+        logger.error('Error updating scout level', { error: error.message, userId: req.params.userId });
+        res.status(500).json({ error: 'Failed to update scout level' });
+    }
+});
+
+// GET /api/scouts/:userId/badges
+// Get badges earned by scout
+app.get('/api/scouts/:userId/badges', auth.isAuthenticated, async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        // Check access: own badges or troop leader/council admin
+        if (req.session.userId !== userId &&
+            !['troop_leader', 'council_admin'].includes(req.session.userRole)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
+        const badges = await db.getAll(`
+            SELECT
+                sb.*,
+                b."badgeName",
+                b."badgeType",
+                b."imageUrl",
+                b."badgeCode",
+                verifier."firstName" || ' ' || verifier."lastName" as "verifiedByName"
+            FROM scout_badges sb
+            JOIN badges b ON b.id = sb."badgeId"
+            LEFT JOIN users verifier ON verifier.id = sb."verifiedBy"
+            WHERE sb."userId" = $1
+            ORDER BY sb."earnedDate" DESC
+        `, [userId]);
+
+        logger.info('Scout badges fetched', { userId, count: badges.length });
+        res.json(badges);
+    } catch (error) {
+        logger.error('Error fetching scout badges', { error: error.message, userId: req.params.userId });
+        res.status(500).json({ error: 'Failed to fetch badges' });
+    }
+});
+
+// POST /api/scouts/:userId/badges
+// Award a badge to scout (troop leaders and council admins only)
+app.post('/api/scouts/:userId/badges', auth.isAuthenticated, auth.hasRole('troop_leader', 'council_admin'), async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { badgeId, earnedDate, notes } = req.body;
+
+        if (!badgeId || !earnedDate) {
+            return res.status(400).json({ error: 'badgeId and earnedDate are required' });
+        }
+
+        // Verify scout profile exists
+        const profile = await db.getOne(`
+            SELECT "troopId" FROM scout_profiles WHERE "userId" = $1
+        `, [userId]);
+
+        if (!profile) {
+            return res.status(404).json({ error: 'Scout profile not found' });
+        }
+
+        // Verify badge exists
+        const badge = await db.getOne(`SELECT id, "badgeName" FROM badges WHERE id = $1`, [badgeId]);
+        if (!badge) {
+            return res.status(404).json({ error: 'Badge not found' });
+        }
+
+        const awardedBadge = await db.getOne(`
+            INSERT INTO scout_badges (
+                "userId", "badgeId", "troopId", "earnedDate",
+                "verifiedBy", "verifiedDate", notes
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING *
+        `, [
+            userId,
+            badgeId,
+            profile.troopId,
+            earnedDate,
+            req.session.userId,
+            new Date().toISOString().split('T')[0],
+            notes || null
+        ]);
+
+        logger.info('Badge awarded', { userId, badgeId, badgeName: badge.badgeName, awardedBy: req.session.userId });
+
+        // Create achievement notification for scout
+        await db.run(`
+            INSERT INTO notifications (
+                "userId", type, title, message, "actionUrl"
+            ) VALUES ($1, $2, $3, $4, $5)
+        `, [
+            userId,
+            'achievement',
+            'New Badge Earned!',
+            `You've earned the ${badge.badgeName} badge!`,
+            '/profile'
+        ]);
+
+        res.status(201).json(awardedBadge);
+    } catch (error) {
+        if (error.message.includes('duplicate key') || error.code === '23505') {
+            return res.status(409).json({ error: 'Badge already awarded on this date' });
+        }
+        logger.error('Error awarding badge', { error: error.message, userId: req.params.userId });
+        res.status(500).json({ error: 'Failed to award badge' });
+    }
+});
+
+// GET /api/badge-catalogs
+// List all badge catalogs (optionally filtered by organization)
+app.get('/api/badge-catalogs', auth.isAuthenticated, async (req, res) => {
+    try {
+        const { orgCode } = req.query;
+
+        let query = `
+            SELECT bc.*, so."orgName", so."orgCode"
+            FROM badge_catalogs bc
+            JOIN scout_organizations so ON so.id = bc."organizationId"
+            WHERE bc."isActive" = $1
+        `;
+        const params = [true];
+
+        if (orgCode) {
+            query += ` AND so."orgCode" = $${params.length + 1}`;
+            params.push(orgCode);
+        }
+
+        query += ` ORDER BY bc."catalogYear" DESC, bc."catalogName"`;
+
+        const catalogs = await db.getAll(query, params);
+        logger.info('Badge catalogs fetched', { count: catalogs.length, orgCode: orgCode || 'all' });
+        res.json(catalogs);
+    } catch (error) {
+        logger.error('Error fetching badge catalogs', { error: error.message });
+        res.status(500).json({ error: 'Failed to fetch badge catalogs' });
+    }
+});
+
+// GET /api/badge-catalogs/:catalogId/badges
+// Get all badges in a catalog (with filters)
+app.get('/api/badge-catalogs/:catalogId/badges', auth.isAuthenticated, async (req, res) => {
+    try {
+        const { catalogId } = req.params;
+        const { level, type, search } = req.query;
+
+        let query = `
+            SELECT b.*
+            FROM badges b
+            WHERE b."badgeCatalogId" = $1
+              AND b."isActive" = $2
+        `;
+        const params = [catalogId, true];
+
+        // Filter by level if provided
+        if (level) {
+            query += ` AND b."applicableLevels" @> $${params.length + 1}`;
+            params.push(JSON.stringify([level]));
+        }
+
+        // Filter by type if provided
+        if (type) {
+            query += ` AND b."badgeType" = $${params.length + 1}`;
+            params.push(type);
+        }
+
+        // Search by name if provided
+        if (search) {
+            query += ` AND b."badgeName" ILIKE $${params.length + 1}`;
+            params.push(`%${search}%`);
+        }
+
+        query += ` ORDER BY b."sortOrder", b."badgeName"`;
+
+        const badges = await db.getAll(query, params);
+        logger.info('Catalog badges fetched', { catalogId, count: badges.length, level, type });
+        res.json(badges);
+    } catch (error) {
+        logger.error('Error fetching catalog badges', { error: error.message, catalogId: req.params.catalogId });
+        res.status(500).json({ error: 'Failed to fetch catalog badges' });
+    }
+});
+
+// GET /api/scouts/:userId/available-badges
+// Get badges available for scout's current level (not yet earned)
+app.get('/api/scouts/:userId/available-badges', auth.isAuthenticated, async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        // Check access
+        if (req.session.userId !== userId &&
+            !['troop_leader', 'council_admin'].includes(req.session.userRole)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
+        // Get scout profile with level and organization
+        const profile = await db.getOne(`
+            SELECT sp."currentLevelId", sl."levelCode", so.id as "orgId"
+            FROM scout_profiles sp
+            JOIN scout_levels sl ON sl.id = sp."currentLevelId"
+            JOIN level_systems ls ON ls.id = sl."levelSystemId"
+            JOIN scout_organizations so ON so.id = ls."organizationId"
+            WHERE sp."userId" = $1
+        `, [userId]);
+
+        if (!profile) {
+            return res.status(404).json({ error: 'Scout profile not found' });
+        }
+
+        // Get badges applicable to scout's level that they haven't earned yet
+        const availableBadges = await db.getAll(`
+            SELECT b.*
+            FROM badges b
+            JOIN badge_catalogs bc ON bc.id = b."badgeCatalogId"
+            WHERE bc."organizationId" = $1
+              AND b."applicableLevels" @> $2
+              AND b."isActive" = true
+              AND b.id NOT IN (
+                  SELECT "badgeId" FROM scout_badges WHERE "userId" = $3
+              )
+            ORDER BY b."sortOrder", b."badgeName"
+        `, [profile.orgId, JSON.stringify([profile.levelCode]), userId]);
+
+        logger.info('Available badges fetched', { userId, count: availableBadges.length, level: profile.levelCode });
+        res.json(availableBadges);
+    } catch (error) {
+        logger.error('Error fetching available badges', { error: error.message, userId: req.params.userId });
+        res.status(500).json({ error: 'Failed to fetch available badges' });
     }
 });
 

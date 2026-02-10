@@ -1,6 +1,6 @@
-[For Girl Scout Brands ](References/Girl%20Scout%20Resources/Girl%20Scouts%20Brand%20Resources.md)
+[GirlScout Brands](docs/References/Girl%20Scout%20Resources)
 
-[For Scouting America Brands](References/Scouting%20America%20Resources/SA%20Branding.md)
+[BSA Brands](docs/References/Scouting%20America%20Resources)
 
 ## Implementation Phases
 
@@ -85,38 +85,6 @@
 - Define fallback fonts for web safety
 - Implement via Google Fonts or self-hosted fonts
 
-## Action Items
-
-### Immediate (Current Phase):
-- [ ] Review Scouting America brand guidelines PDF
-- [ ] Review Girl Scouts brand color PDF
-- [ ] Extract official color palettes for both organizations
-- [ ] Identify official typography for both organizations
-- [ ] Determine dual-brand strategy
-
-### Phase 3.1 (Scout Profiles):
-- [ ] Add organization field to scout profiles
-- [ ] Add rank/level field (Cub Scout ranks or Girl Scout levels)
-- [ ] Support rank/level-specific colors in scout cards
-
-### Phase 6 (Mobile/UX):
-- [ ] Implement Scouting America color scheme
-- [ ] Implement Girl Scouts color scheme
-- [ ] Add organization-specific logos
-- [ ] Create organization switcher UI
-- [ ] Update typography if applicable
-- [ ] Test accessibility with both color palettes
-- [ ] Add Cub Scout rank colors (Lion, Tiger, Wolf, Bear, Webelos, AoL)
-- [ ] Add Girl Scout level colors (Daisy, Brownie, Junior, Cadette, Senior, Ambassador)
-
-### Phase 8 (Polish):
-- [ ] Final brand compliance review for both organizations
-- [ ] Create internal dual-brand usage guide
-- [ ] Document all brand elements used
-- [ ] Get sign-off on brand implementation
-- [ ] Test organization switcher functionality
-
----
 
 
 ## Important Notes
