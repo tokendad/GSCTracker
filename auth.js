@@ -1,12 +1,15 @@
 /**
  * Authentication utilities and middleware for Apex Scout Manager v2.0
  *
- * Provides user authentication, authorization, and session management.
+ * Provides user authentication, authorization, session management,
+ * and privilege-based access control.
  */
 
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const logger = require('./logger');
+const db = require('./database/query-helpers');
+const { ROLE_PRIVILEGE_DEFAULTS, getEffectiveScope } = require('./privileges');
 
 /**
  * Hash a password using bcrypt
@@ -43,7 +46,7 @@ function generateSessionToken() {
  */
 function isSuperUser(req) {
     const superUserEmail = 'welefort@gmail.com';
-    return (req.session && req.session.userEmail === superUserEmail) || 
+    return (req.session && req.session.userEmail === superUserEmail) ||
            (req.user && req.user.email === superUserEmail);
 }
 
@@ -134,17 +137,359 @@ function canAccessResource(req, res, next) {
     next();
 }
 
+// ============================================================================
+// Privilege Enforcement Middleware
+// ============================================================================
+
+/**
+ * Middleware factory: require a specific privilege for troop-scoped endpoints.
+ * Expects troopId in req.params, req.body, or req.query.
+ *
+ * Sets on req: effectiveScope, troopId, troopRole, memberDen,
+ *              linkedParentId, linkedScoutId
+ *
+ * @param {string} privilegeCode - The privilege code to check
+ * @returns {Function} Express middleware
+ */
+function requirePrivilege(privilegeCode) {
+    return async (req, res, next) => {
+        try {
+            // 1. Superuser bypass
+            if (isSuperUser(req)) {
+                req.effectiveScope = 'T';
+                req.troopRole = 'council_admin';
+                return next();
+            }
+
+            // 2. Council admin bypass
+            if (req.session.userRole === 'council_admin') {
+                req.effectiveScope = 'T';
+                req.troopRole = 'council_admin';
+                return next();
+            }
+
+            // 3. Resolve troopId
+            const troopId = req.params.troopId || (req.body && req.body.troopId) || (req.query && req.query.troopId);
+            if (!troopId) {
+                return res.status(400).json({ error: 'Troop context required' });
+            }
+            req.troopId = troopId;
+
+            // 4. Load user's troop membership
+            const member = await db.getOne(`
+                SELECT role, den, "linkedParentId", "linkedScoutId"
+                FROM troop_members
+                WHERE "troopId" = $1 AND "userId" = $2 AND status = 'active'
+            `, [troopId, req.session.userId]);
+
+            if (!member) {
+                return res.status(403).json({ error: 'Not a member of this troop' });
+            }
+
+            req.troopRole = member.role;
+            req.memberDen = member.den;
+            req.linkedParentId = member.linkedParentId;
+            req.linkedScoutId = member.linkedScoutId;
+
+            // 5. Load privilege overrides for this user+troop
+            const overrides = await db.getAll(
+                'SELECT "privilegeCode", scope FROM privilege_overrides WHERE "troopId" = $1 AND "userId" = $2',
+                [troopId, req.session.userId]
+            );
+
+            // 6. Compute effective scope
+            const effectiveScope = getEffectiveScope(member.role, overrides, privilegeCode);
+
+            // 7. Block if scope is 'none'
+            if (effectiveScope === 'none') {
+                return res.status(403).json({ error: 'Insufficient privileges' });
+            }
+
+            // 8. D scope with null den falls back to S
+            if (effectiveScope === 'D' && !member.den) {
+                req.effectiveScope = 'S';
+            } else {
+                req.effectiveScope = effectiveScope;
+            }
+
+            next();
+        } catch (error) {
+            logger.error('Privilege check failed', { error: error.message, privilegeCode });
+            res.status(500).json({ error: 'Authorization check failed' });
+        }
+    };
+}
+
+/**
+ * Middleware factory: require privilege for user-targeted endpoints (e.g. /api/scouts/:userId/...).
+ * Resolves troopId by finding a shared troop between the requesting user and the target user.
+ *
+ * @param {string} privilegeCode - The privilege code to check
+ * @returns {Function} Express middleware
+ */
+function requirePrivilegeForUser(privilegeCode) {
+    return async (req, res, next) => {
+        try {
+            const targetUserId = req.params.userId;
+
+            // 1. Superuser bypass
+            if (isSuperUser(req)) {
+                req.effectiveScope = 'T';
+                req.troopRole = 'council_admin';
+                return next();
+            }
+
+            // 2. Council admin bypass
+            if (req.session.userRole === 'council_admin') {
+                req.effectiveScope = 'T';
+                req.troopRole = 'council_admin';
+                return next();
+            }
+
+            // 3. If accessing own data, find any troop membership and check privilege
+            if (targetUserId === req.session.userId) {
+                const membership = await db.getOne(`
+                    SELECT "troopId", role, den, "linkedParentId", "linkedScoutId"
+                    FROM troop_members
+                    WHERE "userId" = $1 AND status = 'active'
+                    LIMIT 1
+                `, [req.session.userId]);
+
+                if (!membership) {
+                    return res.status(403).json({ error: 'No active troop membership' });
+                }
+
+                req.troopId = membership.troopId;
+                req.troopRole = membership.role;
+                req.memberDen = membership.den;
+                req.linkedParentId = membership.linkedParentId;
+                req.linkedScoutId = membership.linkedScoutId;
+
+                const overrides = await db.getAll(
+                    'SELECT "privilegeCode", scope FROM privilege_overrides WHERE "troopId" = $1 AND "userId" = $2',
+                    [membership.troopId, req.session.userId]
+                );
+
+                const effectiveScope = getEffectiveScope(membership.role, overrides, privilegeCode);
+                if (effectiveScope === 'none') {
+                    return res.status(403).json({ error: 'Insufficient privileges' });
+                }
+
+                req.effectiveScope = (effectiveScope === 'D' && !membership.den) ? 'S' : effectiveScope;
+                return next();
+            }
+
+            // 4. Accessing another user's data - find a shared troop
+            const sharedTroop = await db.getOne(`
+                SELECT tm1."troopId", tm1.role, tm1.den, tm1."linkedParentId", tm1."linkedScoutId"
+                FROM troop_members tm1
+                JOIN troop_members tm2 ON tm2."troopId" = tm1."troopId"
+                WHERE tm1."userId" = $1 AND tm2."userId" = $2
+                  AND tm1.status = 'active' AND tm2.status = 'active'
+                LIMIT 1
+            `, [req.session.userId, targetUserId]);
+
+            if (!sharedTroop) {
+                return res.status(403).json({ error: 'No shared troop membership with target user' });
+            }
+
+            req.troopId = sharedTroop.troopId;
+            req.troopRole = sharedTroop.role;
+            req.memberDen = sharedTroop.den;
+            req.linkedParentId = sharedTroop.linkedParentId;
+            req.linkedScoutId = sharedTroop.linkedScoutId;
+
+            const overrides = await db.getAll(
+                'SELECT "privilegeCode", scope FROM privilege_overrides WHERE "troopId" = $1 AND "userId" = $2',
+                [sharedTroop.troopId, req.session.userId]
+            );
+
+            const effectiveScope = getEffectiveScope(sharedTroop.role, overrides, privilegeCode);
+            if (effectiveScope === 'none') {
+                return res.status(403).json({ error: 'Insufficient privileges' });
+            }
+
+            req.effectiveScope = (effectiveScope === 'D' && !sharedTroop.den) ? 'S' : effectiveScope;
+
+            // 5. Verify target user is within scope
+            const inScope = await isTargetInScope(req, targetUserId);
+            if (!inScope) {
+                return res.status(403).json({ error: 'Target user is outside your access scope' });
+            }
+
+            next();
+        } catch (error) {
+            logger.error('Privilege check failed for user endpoint', { error: error.message, privilegeCode });
+            res.status(500).json({ error: 'Authorization check failed' });
+        }
+    };
+}
+
+/**
+ * Middleware factory: require privilege in any active troop membership.
+ * For self-only endpoints without troopId (e.g. GET /api/sales).
+ *
+ * @param {string} privilegeCode - The privilege code to check
+ * @returns {Function} Express middleware
+ */
+function requirePrivilegeAnyTroop(privilegeCode) {
+    return async (req, res, next) => {
+        try {
+            // 1. Superuser bypass
+            if (isSuperUser(req)) {
+                req.effectiveScope = 'T';
+                return next();
+            }
+
+            // 2. Council admin bypass
+            if (req.session.userRole === 'council_admin') {
+                req.effectiveScope = 'T';
+                return next();
+            }
+
+            // 3. Check all active troop memberships
+            const memberships = await db.getAll(
+                'SELECT "troopId", role FROM troop_members WHERE "userId" = $1 AND status = \'active\'',
+                [req.session.userId]
+            );
+
+            for (const m of memberships) {
+                const overrides = await db.getAll(
+                    'SELECT "privilegeCode", scope FROM privilege_overrides WHERE "troopId" = $1 AND "userId" = $2',
+                    [m.troopId, req.session.userId]
+                );
+
+                const effectiveScope = getEffectiveScope(m.role, overrides, privilegeCode);
+                if (effectiveScope !== 'none') {
+                    req.effectiveScope = effectiveScope;
+                    req.troopId = m.troopId;
+                    req.troopRole = m.role;
+                    return next();
+                }
+            }
+
+            // No troop grants this privilege
+            return res.status(403).json({ error: 'Insufficient privileges' });
+        } catch (error) {
+            logger.error('Privilege check failed (any troop)', { error: error.message, privilegeCode });
+            res.status(500).json({ error: 'Authorization check failed' });
+        }
+    };
+}
+
+// ============================================================================
+// Scope Filtering Helpers
+// ============================================================================
+
+/**
+ * Get all user IDs in the same household within a troop.
+ * Uses linkedParentId bidirectional links in troop_members.
+ *
+ * @param {string} troopId - Troop ID
+ * @param {string} userId - Current user ID
+ * @returns {Promise<string[]>} Array of user IDs in the household
+ */
+async function getHouseholdUserIds(troopId, userId) {
+    const results = await db.getAll(`
+        SELECT DISTINCT tm2."userId"
+        FROM troop_members tm1
+        JOIN troop_members tm2 ON tm2."troopId" = tm1."troopId"
+        WHERE tm1."troopId" = $1
+          AND tm1."userId" = $2
+          AND tm1.status = 'active'
+          AND tm2.status = 'active'
+          AND (
+              tm2."userId" = $2
+              OR tm2."linkedParentId" = $2
+              OR tm2."userId" = tm1."linkedParentId"
+              OR tm2."userId" = tm1."linkedScoutId"
+              OR tm2."linkedScoutId" = $2
+          )
+    `, [troopId, userId]);
+    return results.map(r => r.userId);
+}
+
+/**
+ * Check if a target user falls within the requesting user's effective scope.
+ *
+ * @param {Object} req - Express request with effectiveScope, troopId, session.userId, memberDen
+ * @param {string} targetUserId - The user ID being accessed
+ * @returns {Promise<boolean>} True if target is in scope
+ */
+async function isTargetInScope(req, targetUserId) {
+    switch (req.effectiveScope) {
+        case 'T':
+            return true;
+        case 'S':
+            return targetUserId === req.session.userId;
+        case 'H': {
+            const householdIds = await getHouseholdUserIds(req.troopId, req.session.userId);
+            return householdIds.includes(targetUserId);
+        }
+        case 'D': {
+            const target = await db.getOne(
+                'SELECT den FROM troop_members WHERE "troopId" = $1 AND "userId" = $2 AND status = \'active\'',
+                [req.troopId, targetUserId]
+            );
+            return target && target.den && target.den === req.memberDen;
+        }
+        default:
+            return false;
+    }
+}
+
+/**
+ * Build a SQL WHERE clause fragment for scope-based data filtering.
+ * Returns { clause: string, params: array } where clause starts with " AND ...".
+ *
+ * @param {string} scope - T/D/H/S
+ * @param {string} userIdColumn - SQL column reference for the user ID (e.g. 'u.id', 's."userId"')
+ * @param {Object} req - Express request with troopId, session.userId, memberDen
+ * @param {number} paramOffset - Number of existing query params (for $N numbering)
+ * @returns {Promise<{clause: string, params: Array}>}
+ */
+async function buildScopeFilter(scope, userIdColumn, req, paramOffset = 0) {
+    switch (scope) {
+        case 'T':
+            return { clause: '', params: [] };
+        case 'S':
+            return {
+                clause: ` AND ${userIdColumn} = $${paramOffset + 1}`,
+                params: [req.session.userId]
+            };
+        case 'H': {
+            const householdIds = await getHouseholdUserIds(req.troopId, req.session.userId);
+            return {
+                clause: ` AND ${userIdColumn} = ANY($${paramOffset + 1}::uuid[])`,
+                params: [householdIds]
+            };
+        }
+        case 'D': {
+            return {
+                clause: ` AND ${userIdColumn} IN (
+                    SELECT "userId" FROM troop_members
+                    WHERE "troopId" = $${paramOffset + 1} AND den = $${paramOffset + 2} AND status = 'active'
+                )`,
+                params: [req.troopId, req.memberDen]
+            };
+        }
+        default:
+            // Should never reach here (middleware blocks 'none')
+            return { clause: ' AND 1 = 0', params: [] };
+    }
+}
+
 /**
  * Log authentication event to audit log
- * @param {Object} db - Database query helpers
+ * @param {Object} dbInstance - Database query helpers
  * @param {string} userId - User ID (UUID)
  * @param {string} action - Action performed
  * @param {Object} req - Express request object
  * @param {Object} details - Additional details
  */
-async function logAuditEvent(db, userId, action, req, details = {}) {
+async function logAuditEvent(dbInstance, userId, action, req, details = {}) {
     try {
-        await db.run(`
+        await dbInstance.run(`
             INSERT INTO audit_log ("userId", action, "resourceType", "resourceId", "ipAddress", "userAgent", details)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
         `, [
@@ -225,16 +570,16 @@ function validatePassword(password) {
 
 /**
  * Create notification for user
- * @param {Object} db - Database query helpers
+ * @param {Object} dbInstance - Database query helpers
  * @param {string} userId - User ID (UUID)
  * @param {string} type - Notification type
  * @param {string} title - Notification title
  * @param {string} message - Notification message
  * @param {string} actionUrl - Optional action URL
  */
-async function createNotification(db, userId, type, title, message, actionUrl = null) {
+async function createNotification(dbInstance, userId, type, title, message, actionUrl = null) {
     try {
-        await db.run(`
+        await dbInstance.run(`
             INSERT INTO notifications ("userId", type, title, message, "actionUrl")
             VALUES ($1, $2, $3, $4, $5)
         `, [userId, type, title, message, actionUrl]);
@@ -245,12 +590,12 @@ async function createNotification(db, userId, type, title, message, actionUrl = 
 
 /**
  * Clean up expired sessions
- * @param {Object} db - Database query helpers
+ * @param {Object} dbInstance - Database query helpers
  * @returns {Promise<void>}
  */
-async function cleanupExpiredSessions(db) {
+async function cleanupExpiredSessions(dbInstance) {
     try {
-        const rowCount = await db.run(`
+        const rowCount = await dbInstance.run(`
             DELETE FROM sessions
             WHERE "expiresAt" < NOW()
         `);
@@ -298,5 +643,13 @@ module.exports = {
     createNotification,
     cleanupExpiredSessions,
     hasPermissionLevel,
-    ROLE_LEVELS
+    ROLE_LEVELS,
+    // Privilege enforcement
+    requirePrivilege,
+    requirePrivilegeForUser,
+    requirePrivilegeAnyTroop,
+    getHouseholdUserIds,
+    isTargetInScope,
+    buildScopeFilter,
+    isSuperUser
 };

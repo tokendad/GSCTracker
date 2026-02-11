@@ -16,6 +16,7 @@ RUN npm install --omit=dev
 COPY server.js ./
 COPY logger.js ./
 COPY auth.js ./
+COPY privileges.js ./
 COPY passport-config.js ./
 COPY database/ ./database/
 COPY migrations/ ./migrations/

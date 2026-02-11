@@ -19,64 +19,9 @@ const db = require('./database/query-helpers');
 const pool = require('./database/pg-pool');
 
 // ============================================================================
-// Privilege System Constants
+// Privilege System Constants (imported from shared module)
 // ============================================================================
-const PRIVILEGE_DEFINITIONS = [
-    // Troop & Member Management
-    { code: 'view_roster', name: 'View troop roster', category: 'Troop & Member Management' },
-    { code: 'manage_members', name: 'Manage troop members', category: 'Troop & Member Management' },
-    { code: 'manage_troop_settings', name: 'Manage troop settings', category: 'Troop & Member Management' },
-    { code: 'send_invitations', name: 'Send invitations', category: 'Troop & Member Management' },
-    { code: 'import_roster', name: 'Import roster', category: 'Troop & Member Management' },
-    { code: 'manage_member_roles', name: 'Manage member roles', category: 'Troop & Member Management' },
-    { code: 'manage_privileges', name: 'Manage privileges', category: 'Troop & Member Management' },
-    // Scout Profiles & Advancement
-    { code: 'view_scout_profiles', name: 'View scout profiles', category: 'Scout Profiles & Advancement' },
-    { code: 'edit_scout_level', name: 'Edit scout level', category: 'Scout Profiles & Advancement' },
-    { code: 'edit_scout_status', name: 'Edit scout status', category: 'Scout Profiles & Advancement' },
-    { code: 'award_badges', name: 'Award badges', category: 'Scout Profiles & Advancement' },
-    { code: 'view_badge_progress', name: 'View badge progress', category: 'Scout Profiles & Advancement' },
-    { code: 'edit_personal_info', name: 'Edit personal info', category: 'Scout Profiles & Advancement' },
-    // Calendar & Events
-    { code: 'view_events', name: 'View events', category: 'Calendar & Events' },
-    { code: 'manage_events', name: 'Manage events', category: 'Calendar & Events' },
-    { code: 'export_calendar', name: 'Export calendar', category: 'Calendar & Events' },
-    // Fundraising & Sales (future)
-    { code: 'view_sales', name: 'View sales data', category: 'Fundraising & Sales', future: true },
-    { code: 'record_sales', name: 'Record sales', category: 'Fundraising & Sales', future: true },
-    { code: 'manage_fundraisers', name: 'Manage fundraisers', category: 'Fundraising & Sales', future: true },
-    { code: 'view_troop_sales', name: 'View troop sales', category: 'Fundraising & Sales', future: true },
-    { code: 'view_financials', name: 'View financial accounts', category: 'Fundraising & Sales', future: true },
-    { code: 'manage_financials', name: 'Manage financial accounts', category: 'Fundraising & Sales', future: true },
-    // Donations
-    { code: 'view_donations', name: 'View donations', category: 'Donations' },
-    { code: 'record_donations', name: 'Record donations', category: 'Donations' },
-    { code: 'delete_donations', name: 'Delete donations', category: 'Donations' },
-    // Troop Goals & Reporting
-    { code: 'view_goals', name: 'View goals', category: 'Troop Goals & Reporting' },
-    { code: 'manage_goals', name: 'Manage goals', category: 'Troop Goals & Reporting' },
-    { code: 'view_leaderboard', name: 'View leaderboard', category: 'Troop Goals & Reporting' },
-    // Data & Settings
-    { code: 'manage_payment_methods', name: 'Manage payment methods', category: 'Data & Settings' },
-    { code: 'import_data', name: 'Import data', category: 'Data & Settings' },
-    { code: 'export_data', name: 'Export data', category: 'Data & Settings' },
-    { code: 'delete_own_data', name: 'Delete own data', category: 'Data & Settings' },
-];
-
-const VALID_PRIVILEGE_CODES = PRIVILEGE_DEFINITIONS.map(p => p.code);
-const VALID_SCOPES = ['T', 'D', 'H', 'S', 'none'];
-
-// Default privilege scopes per troop role (from Account Access Schema)
-const ROLE_PRIVILEGE_DEFAULTS = {
-    member:        { view_roster:'none', manage_members:'none', manage_troop_settings:'none', send_invitations:'none', import_roster:'none', manage_member_roles:'none', manage_privileges:'none', view_scout_profiles:'S', edit_scout_level:'none', edit_scout_status:'none', award_badges:'none', view_badge_progress:'S', edit_personal_info:'none', view_events:'T', manage_events:'none', export_calendar:'T', view_sales:'S', record_sales:'S', manage_fundraisers:'none', view_troop_sales:'none', view_financials:'none', manage_financials:'none', view_donations:'S', record_donations:'S', delete_donations:'S', view_goals:'T', manage_goals:'none', view_leaderboard:'T', manage_payment_methods:'S', import_data:'none', export_data:'S', delete_own_data:'S' },
-    parent:        { view_roster:'none', manage_members:'none', manage_troop_settings:'none', send_invitations:'none', import_roster:'none', manage_member_roles:'none', manage_privileges:'none', view_scout_profiles:'H', edit_scout_level:'none', edit_scout_status:'none', award_badges:'none', view_badge_progress:'H', edit_personal_info:'H', view_events:'T', manage_events:'none', export_calendar:'T', view_sales:'H', record_sales:'H', manage_fundraisers:'none', view_troop_sales:'none', view_financials:'none', manage_financials:'none', view_donations:'H', record_donations:'H', delete_donations:'H', view_goals:'T', manage_goals:'none', view_leaderboard:'T', manage_payment_methods:'S', import_data:'none', export_data:'H', delete_own_data:'S' },
-    volunteer:     { view_roster:'T', manage_members:'none', manage_troop_settings:'none', send_invitations:'none', import_roster:'none', manage_member_roles:'none', manage_privileges:'none', view_scout_profiles:'none', edit_scout_level:'none', edit_scout_status:'none', award_badges:'none', view_badge_progress:'none', edit_personal_info:'none', view_events:'T', manage_events:'none', export_calendar:'T', view_sales:'none', record_sales:'none', manage_fundraisers:'none', view_troop_sales:'none', view_financials:'none', manage_financials:'none', view_donations:'none', record_donations:'none', delete_donations:'none', view_goals:'T', manage_goals:'none', view_leaderboard:'T', manage_payment_methods:'S', import_data:'none', export_data:'none', delete_own_data:'S' },
-    assistant:     { view_roster:'T', manage_members:'none', manage_troop_settings:'none', send_invitations:'none', import_roster:'none', manage_member_roles:'none', manage_privileges:'none', view_scout_profiles:'D', edit_scout_level:'none', edit_scout_status:'none', award_badges:'none', view_badge_progress:'D', edit_personal_info:'none', view_events:'T', manage_events:'T', export_calendar:'T', view_sales:'none', record_sales:'none', manage_fundraisers:'none', view_troop_sales:'none', view_financials:'none', manage_financials:'none', view_donations:'none', record_donations:'none', delete_donations:'none', view_goals:'T', manage_goals:'none', view_leaderboard:'T', manage_payment_methods:'S', import_data:'none', export_data:'none', delete_own_data:'S' },
-    'co-leader':   { view_roster:'T', manage_members:'T', manage_troop_settings:'T', send_invitations:'T', import_roster:'T', manage_member_roles:'none', manage_privileges:'none', view_scout_profiles:'T', edit_scout_level:'T', edit_scout_status:'T', award_badges:'T', view_badge_progress:'T', edit_personal_info:'T', view_events:'T', manage_events:'T', export_calendar:'T', view_sales:'T', record_sales:'S', manage_fundraisers:'T', view_troop_sales:'T', view_financials:'T', manage_financials:'none', view_donations:'T', record_donations:'S', delete_donations:'S', view_goals:'T', manage_goals:'T', view_leaderboard:'T', manage_payment_methods:'S', import_data:'none', export_data:'T', delete_own_data:'S' },
-    cookie_leader: { view_roster:'T', manage_members:'none', manage_troop_settings:'none', send_invitations:'none', import_roster:'none', manage_member_roles:'none', manage_privileges:'none', view_scout_profiles:'none', edit_scout_level:'none', edit_scout_status:'none', award_badges:'none', view_badge_progress:'none', edit_personal_info:'none', view_events:'T', manage_events:'none', export_calendar:'T', view_sales:'T', record_sales:'T', manage_fundraisers:'T', view_troop_sales:'T', view_financials:'T', manage_financials:'T', view_donations:'T', record_donations:'S', delete_donations:'none', view_goals:'T', manage_goals:'none', view_leaderboard:'T', manage_payment_methods:'S', import_data:'T', export_data:'T', delete_own_data:'S' },
-    troop_leader:  { view_roster:'T', manage_members:'T', manage_troop_settings:'T', send_invitations:'T', import_roster:'T', manage_member_roles:'T', manage_privileges:'T', view_scout_profiles:'T', edit_scout_level:'T', edit_scout_status:'T', award_badges:'T', view_badge_progress:'T', edit_personal_info:'T', view_events:'T', manage_events:'T', export_calendar:'T', view_sales:'T', record_sales:'T', manage_fundraisers:'T', view_troop_sales:'T', view_financials:'T', manage_financials:'T', view_donations:'T', record_donations:'T', delete_donations:'T', view_goals:'T', manage_goals:'T', view_leaderboard:'T', manage_payment_methods:'S', import_data:'T', export_data:'T', delete_own_data:'S' },
-    council_admin: { view_roster:'T', manage_members:'T', manage_troop_settings:'T', send_invitations:'T', import_roster:'T', manage_member_roles:'T', manage_privileges:'T', view_scout_profiles:'T', edit_scout_level:'T', edit_scout_status:'T', award_badges:'T', view_badge_progress:'T', edit_personal_info:'T', view_events:'T', manage_events:'T', export_calendar:'T', view_sales:'T', record_sales:'T', manage_fundraisers:'T', view_troop_sales:'T', view_financials:'T', manage_financials:'T', view_donations:'T', record_donations:'T', delete_donations:'T', view_goals:'T', manage_goals:'T', view_leaderboard:'T', manage_payment_methods:'S', import_data:'T', export_data:'T', delete_own_data:'S' },
-};
+const { PRIVILEGE_DEFINITIONS, VALID_PRIVILEGE_CODES, VALID_SCOPES, ROLE_PRIVILEGE_DEFAULTS, buildEffectivePrivileges } = require('./privileges');
 
 // Configure multer for file uploads (memory storage)
 const upload = multer({
@@ -180,6 +125,14 @@ const PORT = process.env.PORT || 3000;
         await db.query(`
             CREATE INDEX IF NOT EXISTS idx_priv_overrides_troop_user
             ON privilege_overrides("troopId", "userId")
+        `).catch(() => {});
+
+        // Add den column for den/patrol scope filtering
+        await db.query(`
+            ALTER TABLE troop_members ADD COLUMN IF NOT EXISTS den VARCHAR(50)
+        `).catch(() => {});
+        await db.query(`
+            CREATE INDEX IF NOT EXISTS idx_troop_members_den ON troop_members("troopId", den)
         `).catch(() => {});
 
         logger.info('Schema migration checks completed');
@@ -596,7 +549,7 @@ app.put('/api/notifications/:id/read', auth.isAuthenticated, async (req, res) =>
 // ============================================================================
 
 // Get all sales (filtered by userId)
-app.get('/api/sales', auth.isAuthenticated, async (req, res) => {
+app.get('/api/sales', auth.isAuthenticated, auth.requirePrivilegeAnyTroop('view_sales'), async (req, res) => {
     try {
         const sales = await db.getAll('SELECT * FROM sales WHERE "userId" = $1 ORDER BY id DESC', [req.session.userId]);
         res.json(sales);
@@ -607,7 +560,7 @@ app.get('/api/sales', auth.isAuthenticated, async (req, res) => {
 });
 
 // Add a new sale
-app.post('/api/sales', auth.isAuthenticated, async (req, res) => {
+app.post('/api/sales', auth.isAuthenticated, auth.requirePrivilegeAnyTroop('record_sales'), async (req, res) => {
     try {
         const {
             cookieType,
@@ -679,7 +632,7 @@ app.post('/api/sales', auth.isAuthenticated, async (req, res) => {
 });
 
 // Update a sale (only owner can update)
-app.put('/api/sales/:id', auth.isAuthenticated, async (req, res) => {
+app.put('/api/sales/:id', auth.isAuthenticated, auth.requirePrivilegeAnyTroop('record_sales'), async (req, res) => {
     try {
         const { id } = req.params;
         const { orderStatus, amountCollected, amountDue } = req.body;
@@ -731,7 +684,7 @@ app.put('/api/sales/:id', auth.isAuthenticated, async (req, res) => {
 });
 
 // Delete a sale (only owner can delete)
-app.delete('/api/sales/:id', auth.isAuthenticated, async (req, res) => {
+app.delete('/api/sales/:id', auth.isAuthenticated, auth.requirePrivilegeAnyTroop('record_sales'), async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -886,7 +839,7 @@ app.put('/api/profile', auth.isAuthenticated, async (req, res) => {
 });
 
 // Get all donations (filtered by userId)
-app.get('/api/donations', auth.isAuthenticated, async (req, res) => {
+app.get('/api/donations', auth.isAuthenticated, auth.requirePrivilegeAnyTroop('view_donations'), async (req, res) => {
     try {
         const donations = await db.getAll('SELECT * FROM donations WHERE "userId" = $1 ORDER BY id DESC', [req.session.userId]);
         res.json(donations);
@@ -897,7 +850,7 @@ app.get('/api/donations', auth.isAuthenticated, async (req, res) => {
 });
 
 // Add a new donation
-app.post('/api/donations', auth.isAuthenticated, async (req, res) => {
+app.post('/api/donations', auth.isAuthenticated, auth.requirePrivilegeAnyTroop('record_donations'), async (req, res) => {
     try {
         const { amount, donorName, date } = req.body;
 
@@ -927,7 +880,7 @@ app.post('/api/donations', auth.isAuthenticated, async (req, res) => {
 });
 
 // Delete a donation (only owner can delete)
-app.delete('/api/donations/:id', auth.isAuthenticated, async (req, res) => {
+app.delete('/api/donations/:id', auth.isAuthenticated, auth.requirePrivilegeAnyTroop('delete_donations'), async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -1405,7 +1358,7 @@ app.delete('/api/payment-methods/:id', auth.isAuthenticated, async (req, res) =>
 
 
 // Delete all sales (only current user's sales)
-app.delete('/api/sales', auth.isAuthenticated, async (req, res) => {
+app.delete('/api/sales', auth.isAuthenticated, auth.requirePrivilegeAnyTroop('delete_own_data'), async (req, res) => {
     try {
         const result = await db.run('DELETE FROM sales WHERE "userId" = $1', [req.session.userId]);
         logger.info('All user sales deleted', { deletedCount: result.rowCount, userId: req.session.userId });
@@ -1417,7 +1370,7 @@ app.delete('/api/sales', auth.isAuthenticated, async (req, res) => {
 });
 
 // Delete all donations (only current user's donations)
-app.delete('/api/donations', auth.isAuthenticated, async (req, res) => {
+app.delete('/api/donations', auth.isAuthenticated, auth.requirePrivilegeAnyTroop('delete_own_data'), async (req, res) => {
     try {
         const result = await db.run('DELETE FROM donations WHERE "userId" = $1', [req.session.userId]);
         logger.info('All user donations deleted', { deletedCount: result.rowCount, userId: req.session.userId });
@@ -1482,18 +1435,12 @@ app.get('/api/troop/my-troops', auth.isAuthenticated, async (req, res) => {
 });
 
 // Get members of a specific troop with sales summaries
-app.get('/api/troop/:troopId/members', auth.isAuthenticated, async (req, res) => {
+app.get('/api/troop/:troopId/members', auth.isAuthenticated, auth.requirePrivilege('view_roster'), async (req, res) => {
     try {
         const { troopId } = req.params;
 
-        // Verify user has access to this troop
-        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
-        if (!troop) {
-            return res.status(404).json({ error: 'Troop not found' });
-        }
-        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
-            return res.status(403).json({ error: 'Access denied' });
-        }
+        // Build scope filter for member visibility
+        const scopeFilter = await auth.buildScopeFilter(req.effectiveScope, 'u.id', req, 1);
 
         // Get members with their sales summaries
         const members = await db.getAll(`
@@ -1506,10 +1453,10 @@ app.get('/api/troop/:troopId/members', auth.isAuthenticated, async (req, res) =>
             FROM troop_members tm
             JOIN users u ON tm."userId" = u.id
             LEFT JOIN sales s ON s."userId" = u.id
-            WHERE tm."troopId" = $1 AND tm.status = 'active'
+            WHERE tm."troopId" = $1 AND tm.status = 'active'${scopeFilter.clause}
             GROUP BY u.id, tm.role, tm."joinDate", tm.status
             ORDER BY u."lastName", u."firstName"
-        `, [troopId]);
+        `, [troopId, ...scopeFilter.params]);
 
         res.json(members);
     } catch (error) {
@@ -1519,18 +1466,12 @@ app.get('/api/troop/:troopId/members', auth.isAuthenticated, async (req, res) =>
 });
 
 // Get aggregated sales data for a troop
-app.get('/api/troop/:troopId/sales', auth.isAuthenticated, async (req, res) => {
+app.get('/api/troop/:troopId/sales', auth.isAuthenticated, auth.requirePrivilege('view_troop_sales'), async (req, res) => {
     try {
         const { troopId } = req.params;
 
-        // Verify user has access to this troop
-        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
-        if (!troop) {
-            return res.status(404).json({ error: 'Troop not found' });
-        }
-        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
-            return res.status(403).json({ error: 'Access denied' });
-        }
+        // Build scope filter for sales visibility
+        const scopeFilter = await auth.buildScopeFilter(req.effectiveScope, 's."userId"', req, 1);
 
         // Get sales by cookie type
         const salesByCookie = await db.getAll(`
@@ -1540,12 +1481,13 @@ app.get('/api/troop/:troopId/sales', auth.isAuthenticated, async (req, res) => {
                 SUM(s."amountCollected") as "totalCollected"
             FROM sales s
             JOIN troop_members tm ON s."userId" = tm."userId"
-            WHERE tm."troopId" = $1 AND tm.status = 'active'
+            WHERE tm."troopId" = $1 AND tm.status = 'active'${scopeFilter.clause}
             GROUP BY s."cookieType"
             ORDER BY "totalQuantity" DESC
-        `, [troopId]);
+        `, [troopId, ...scopeFilter.params]);
 
         // Get totals
+        const scopeFilter2 = await auth.buildScopeFilter(req.effectiveScope, 's."userId"', req, 1);
         const totals = await db.getOne(`
             SELECT
                 COALESCE(SUM(s.quantity), 0) as "totalBoxes",
@@ -1553,8 +1495,8 @@ app.get('/api/troop/:troopId/sales', auth.isAuthenticated, async (req, res) => {
                 COALESCE(SUM(s."amountDue"), 0) as "totalDue"
             FROM sales s
             JOIN troop_members tm ON s."userId" = tm."userId"
-            WHERE tm."troopId" = $1 AND tm.status = 'active'
-        `, [troopId]);
+            WHERE tm."troopId" = $1 AND tm.status = 'active'${scopeFilter2.clause}
+        `, [troopId, ...scopeFilter2.params]);
 
         res.json({
             salesByCookie,
@@ -1567,32 +1509,19 @@ app.get('/api/troop/:troopId/sales', auth.isAuthenticated, async (req, res) => {
 });
 
 // Get troop events (Calendar)
-app.get('/api/troop/:troopId/events', auth.isAuthenticated, async (req, res) => {
+app.get('/api/troop/:troopId/events', auth.isAuthenticated, auth.requirePrivilege('view_events'), async (req, res) => {
     try {
         const { troopId } = req.params;
         const { start, end } = req.query; // Optional date range filtering
 
-        // Verify user has access to this troop
-        const member = await db.getOne('SELECT * FROM troop_members WHERE "troopId" = $1 AND "userId" = $2 AND status = \'active\'', [troopId, req.session.userId]);
-        
-        // Also allow if leader or admin
-        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
-        
-        const isLeader = troop && (troop.leaderId === req.session.userId || troop.cookieLeaderId === req.session.userId);
-        const isAdmin = req.session.userRole === 'council_admin';
-        
-        if (!member && !isLeader && !isAdmin) {
-             return res.status(403).json({ error: 'Access denied' });
-        }
-
         let query = 'SELECT * FROM events WHERE "troopId" = $1';
         const params = [troopId];
-        
+
         if (start && end) {
             query += ' AND "eventDate" BETWEEN $2 AND $3';
             params.push(start, end);
         }
-        
+
         query += ' ORDER BY "eventDate" ASC, "startTime" ASC';
 
         const events = await db.getAll(query, params);
@@ -1604,18 +1533,11 @@ app.get('/api/troop/:troopId/events', auth.isAuthenticated, async (req, res) => 
 });
 
 // Export troop events to .ics
-app.get('/api/troop/:troopId/calendar/export', auth.isAuthenticated, async (req, res) => {
+app.get('/api/troop/:troopId/calendar/export', auth.isAuthenticated, auth.requirePrivilege('export_calendar'), async (req, res) => {
     try {
         const { troopId } = req.params;
-        
-        const member = await db.getOne('SELECT * FROM troop_members WHERE "troopId" = $1 AND "userId" = $2 AND status = \'active\'', [troopId, req.session.userId]);
-        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
-        const isLeader = troop && (troop.leaderId === req.session.userId || troop.cookieLeaderId === req.session.userId);
-        const isAdmin = req.session.userRole === 'council_admin';
 
-        if (!member && !isLeader && !isAdmin) {
-             return res.status(403).json({ error: 'Access denied' });
-        }
+        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
 
         const events = await db.getAll('SELECT * FROM events WHERE "troopId" = $1 ORDER BY "eventDate" ASC', [troopId]);
 
@@ -1660,18 +1582,9 @@ app.get('/api/troop/:troopId/calendar/export', auth.isAuthenticated, async (req,
 });
 
 // Get troop goals
-app.get('/api/troop/:troopId/goals', auth.isAuthenticated, async (req, res) => {
+app.get('/api/troop/:troopId/goals', auth.isAuthenticated, auth.requirePrivilege('view_goals'), async (req, res) => {
     try {
         const { troopId } = req.params;
-
-        // Verify user has access to this troop
-        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
-        if (!troop) {
-            return res.status(404).json({ error: 'Troop not found' });
-        }
-        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
-            return res.status(403).json({ error: 'Access denied' });
-        }
 
         const goals = await db.getAll(`
             SELECT * FROM troop_goals
@@ -1722,18 +1635,14 @@ app.post('/api/troop', auth.isAuthenticated, auth.hasRole('troop_leader', 'counc
 });
 
 // Update a troop
-app.put('/api/troop/:troopId', auth.isAuthenticated, async (req, res) => {
+app.put('/api/troop/:troopId', auth.isAuthenticated, auth.requirePrivilege('manage_troop_settings'), async (req, res) => {
     try {
         const { troopId } = req.params;
         const { troopNumber, troopType, meetingLocation, meetingDay, meetingTime, leaderId } = req.body;
 
-        // Verify user has access
         const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
         if (!troop) {
             return res.status(404).json({ error: 'Troop not found' });
-        }
-        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
-            return res.status(403).json({ error: 'Access denied' });
         }
 
         await db.run(`
@@ -1766,19 +1675,10 @@ app.put('/api/troop/:troopId', auth.isAuthenticated, async (req, res) => {
 });
 
 // Add member to troop
-app.post('/api/troop/:troopId/members', auth.isAuthenticated, async (req, res) => {
+app.post('/api/troop/:troopId/members', auth.isAuthenticated, auth.requirePrivilege('manage_members'), async (req, res) => {
     try {
         const { troopId } = req.params;
         const { email, role, firstName, lastName, address, dateOfBirth, den, familyInfo, position, level, roles } = req.body;
-
-        // Verify user has access
-        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
-        if (!troop) {
-            return res.status(404).json({ error: 'Troop not found' });
-        }
-        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
-            return res.status(403).json({ error: 'Access denied' });
-        }
 
         let user = null;
 
@@ -1830,15 +1730,15 @@ app.post('/api/troop/:troopId/members', auth.isAuthenticated, async (req, res) =
             await db.run(`
                 UPDATE troop_members
                 SET status = 'active', role = $1, "joinDate" = NOW(),
-                    "scoutLevel" = $2, position = $3, "additionalRoles" = $4
-                WHERE id = $5
-            `, [memberRole, level || null, position || null, JSON.stringify(roles || []), existingMember.id]);
+                    "scoutLevel" = $2, position = $3, "additionalRoles" = $4, den = $5
+                WHERE id = $6
+            `, [memberRole, level || null, position || null, JSON.stringify(roles || []), den || null, existingMember.id]);
         } else {
             // Add new member
             await db.run(`
-                INSERT INTO troop_members ("troopId", "userId", role, "scoutLevel", position, "additionalRoles", "joinDate", status)
-                VALUES ($1, $2, $3, $4, $5, $6, NOW(), 'active')
-            `, [troopId, user.id, memberRole, level || null, position || null, JSON.stringify(roles || [])]);
+                INSERT INTO troop_members ("troopId", "userId", role, "scoutLevel", position, "additionalRoles", den, "joinDate", status)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), 'active')
+            `, [troopId, user.id, memberRole, level || null, position || null, JSON.stringify(roles || []), den || null]);
         }
 
         logger.info('Member added to troop', { troopId, userId: user.id, position, level, addedBy: req.session.userId });
@@ -1850,7 +1750,7 @@ app.post('/api/troop/:troopId/members', auth.isAuthenticated, async (req, res) =
 });
 
 // Add new scout with parent information to troop
-app.post('/api/troop/:troopId/members/scout', auth.isAuthenticated, async (req, res) => {
+app.post('/api/troop/:troopId/members/scout', auth.isAuthenticated, auth.requirePrivilege('manage_members'), async (req, res) => {
     try {
         const { troopId } = req.params;
         const {
@@ -1879,15 +1779,6 @@ app.post('/api/troop/:troopId/members/scout', auth.isAuthenticated, async (req, 
         }
         if (!parentRole) {
             return res.status(400).json({ error: 'Parent role is required' });
-        }
-
-        // Verify user has access to manage this troop
-        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
-        if (!troop) {
-            return res.status(404).json({ error: 'Troop not found' });
-        }
-        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
-            return res.status(403).json({ error: 'Access denied' });
         }
 
         // Use transaction for multi-step operation
@@ -2016,17 +1907,14 @@ app.post('/api/troop/:troopId/members/scout', auth.isAuthenticated, async (req, 
 });
 
 // Remove member from troop
-app.delete('/api/troop/:troopId/members/:userId', auth.isAuthenticated, async (req, res) => {
+app.delete('/api/troop/:troopId/members/:userId', auth.isAuthenticated, auth.requirePrivilege('manage_members'), async (req, res) => {
     try {
         const { troopId, userId } = req.params;
 
-        // Verify user has access
-        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
-        if (!troop) {
-            return res.status(404).json({ error: 'Troop not found' });
-        }
-        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
-            return res.status(403).json({ error: 'Access denied' });
+        // Verify target member is within scope
+        const inScope = await auth.isTargetInScope(req, userId);
+        if (!inScope) {
+            return res.status(403).json({ error: 'Target member is outside your access scope' });
         }
 
         // Set member as inactive (soft delete)
@@ -2048,19 +1936,10 @@ app.delete('/api/troop/:troopId/members/:userId', auth.isAuthenticated, async (r
 });
 
 // Create troop goal
-app.post('/api/troop/:troopId/goals', auth.isAuthenticated, async (req, res) => {
+app.post('/api/troop/:troopId/goals', auth.isAuthenticated, auth.requirePrivilege('manage_goals'), async (req, res) => {
     try {
         const { troopId } = req.params;
         const { goalType, targetAmount, startDate, endDate, description } = req.body;
-
-        // Verify user has access
-        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
-        if (!troop) {
-            return res.status(404).json({ error: 'Troop not found' });
-        }
-        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
-            return res.status(403).json({ error: 'Access denied' });
-        }
 
         const validGoalTypes = ['boxes_sold', 'revenue', 'participation', 'events', 'donations'];
         if (!validGoalTypes.includes(goalType)) {
@@ -2403,19 +2282,10 @@ app.delete('/api/cookies/:id', auth.isAuthenticated, auth.hasRole('troop_leader'
 // ============================================================================
 
 // Update troop goal
-app.put('/api/troop/:troopId/goals/:goalId', auth.isAuthenticated, async (req, res) => {
+app.put('/api/troop/:troopId/goals/:goalId', auth.isAuthenticated, auth.requirePrivilege('manage_goals'), async (req, res) => {
     try {
         const { troopId, goalId } = req.params;
         const { targetAmount, startDate, endDate, status, description } = req.body;
-
-        // Verify user has access
-        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
-        if (!troop) {
-            return res.status(404).json({ error: 'Troop not found' });
-        }
-        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
-            return res.status(403).json({ error: 'Access denied' });
-        }
 
         // Check goal exists
         const goal = await db.getOne('SELECT * FROM troop_goals WHERE id = $1 AND "troopId" = $2', [goalId, troopId]);
@@ -2444,18 +2314,9 @@ app.put('/api/troop/:troopId/goals/:goalId', auth.isAuthenticated, async (req, r
 });
 
 // Delete troop goal
-app.delete('/api/troop/:troopId/goals/:goalId', auth.isAuthenticated, async (req, res) => {
+app.delete('/api/troop/:troopId/goals/:goalId', auth.isAuthenticated, auth.requirePrivilege('manage_goals'), async (req, res) => {
     try {
         const { troopId, goalId } = req.params;
-
-        // Verify user has access
-        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
-        if (!troop) {
-            return res.status(404).json({ error: 'Troop not found' });
-        }
-        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
-            return res.status(403).json({ error: 'Access denied' });
-        }
 
         const result = await db.run('DELETE FROM troop_goals WHERE id = $1 AND "troopId" = $2', [goalId, troopId]);
 
@@ -2472,18 +2333,9 @@ app.delete('/api/troop/:troopId/goals/:goalId', auth.isAuthenticated, async (req
 });
 
 // Get troop goal progress
-app.get('/api/troop/:troopId/goals/progress', auth.isAuthenticated, async (req, res) => {
+app.get('/api/troop/:troopId/goals/progress', auth.isAuthenticated, auth.requirePrivilege('view_goals'), async (req, res) => {
     try {
         const { troopId } = req.params;
-
-        // Verify user has access
-        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
-        if (!troop) {
-            return res.status(404).json({ error: 'Troop not found' });
-        }
-        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
-            return res.status(403).json({ error: 'Access denied' });
-        }
 
         const goals = await db.getAll('SELECT * FROM troop_goals WHERE "troopId" = $1', [troopId]);
 
@@ -2573,21 +2425,15 @@ app.get('/api/troop/:troopId/goals/progress', auth.isAuthenticated, async (req, 
 // Phase 3: Leaderboard Route
 // ============================================================================
 
-app.get('/api/troop/:troopId/leaderboard', auth.isAuthenticated, async (req, res) => {
+app.get('/api/troop/:troopId/leaderboard', auth.isAuthenticated, auth.requirePrivilege('view_leaderboard'), async (req, res) => {
     try {
         const { troopId } = req.params;
         const { limit = 10, metric = 'boxes' } = req.query;
 
-        // Verify user has access
-        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
-        if (!troop) {
-            return res.status(404).json({ error: 'Troop not found' });
-        }
-        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
-            return res.status(403).json({ error: 'Access denied' });
-        }
-
         const orderBy = metric === 'revenue' ? '"totalRevenue"' : '"totalBoxes"';
+
+        // Build scope filter for leaderboard visibility
+        const scopeFilter = await auth.buildScopeFilter(req.effectiveScope, 'u.id', req, 2);
 
         const leaderboard = await db.getAll(`
             SELECT
@@ -2597,11 +2443,11 @@ app.get('/api/troop/:troopId/leaderboard', auth.isAuthenticated, async (req, res
             FROM troop_members tm
             JOIN users u ON tm."userId" = u.id
             LEFT JOIN sales s ON s."userId" = u.id
-            WHERE tm."troopId" = $1 AND tm.status = 'active'
+            WHERE tm."troopId" = $1 AND tm.status = 'active'${scopeFilter.clause}
             GROUP BY u.id, u."firstName", u."lastName", u."photoUrl"
             ORDER BY ${orderBy} DESC
             LIMIT $2
-        `, [troopId, parseInt(limit)]);
+        `, [troopId, parseInt(limit), ...scopeFilter.params]);
 
         // Add rank
         const rankedLeaderboard = leaderboard.map((member, index) => ({
@@ -2620,18 +2466,15 @@ app.get('/api/troop/:troopId/leaderboard', auth.isAuthenticated, async (req, res
 // Phase 3: Member Role Update Route
 // ============================================================================
 
-app.put('/api/troop/:troopId/members/:userId', auth.isAuthenticated, async (req, res) => {
+app.put('/api/troop/:troopId/members/:userId', auth.isAuthenticated, auth.requirePrivilege('manage_member_roles'), async (req, res) => {
     try {
         const { troopId, userId } = req.params;
         const { role, linkedScoutId, notes } = req.body;
 
-        // Verify user has access
-        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
-        if (!troop) {
-            return res.status(404).json({ error: 'Troop not found' });
-        }
-        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
-            return res.status(403).json({ error: 'Access denied' });
+        // Verify target member is within scope
+        const inScope = await auth.isTargetInScope(req, userId);
+        if (!inScope) {
+            return res.status(403).json({ error: 'Target member is outside your access scope' });
         }
 
         // Check member exists
@@ -2674,7 +2517,7 @@ app.put('/api/troop/:troopId/members/:userId', auth.isAuthenticated, async (req,
 // ============================================================================
 
 // Send invitation
-app.post('/api/troop/:troopId/invite', auth.isAuthenticated, async (req, res) => {
+app.post('/api/troop/:troopId/invite', auth.isAuthenticated, auth.requirePrivilege('send_invitations'), async (req, res) => {
     try {
         const { troopId } = req.params;
         const { email, role } = req.body;
@@ -2683,13 +2526,9 @@ app.post('/api/troop/:troopId/invite', auth.isAuthenticated, async (req, res) =>
             return res.status(400).json({ error: 'Email is required' });
         }
 
-        // Verify user has access
         const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
         if (!troop) {
             return res.status(404).json({ error: 'Troop not found' });
-        }
-        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
-            return res.status(403).json({ error: 'Access denied' });
         }
 
         // Check if user exists
@@ -2885,18 +2724,9 @@ app.post('/api/invitations/:id/decline', auth.isAuthenticated, async (req, res) 
 // Phase 3: Roster Bulk Import Route
 // ============================================================================
 
-app.post('/api/troop/:troopId/roster/import', auth.isAuthenticated, upload.single('file'), async (req, res) => {
+app.post('/api/troop/:troopId/roster/import', auth.isAuthenticated, auth.requirePrivilege('import_roster'), upload.single('file'), async (req, res) => {
     try {
         const { troopId } = req.params;
-
-        // Verify user has access
-        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
-        if (!troop) {
-            return res.status(404).json({ error: 'Troop not found' });
-        }
-        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
-            return res.status(403).json({ error: 'Access denied' });
-        }
 
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
@@ -3119,15 +2949,9 @@ app.get('/api/organizations/:orgCode/colors', auth.isAuthenticated, async (req, 
 
 // GET /api/scouts/:userId/profile
 // Get scout profile with organization and level details
-app.get('/api/scouts/:userId/profile', auth.isAuthenticated, async (req, res) => {
+app.get('/api/scouts/:userId/profile', auth.isAuthenticated, auth.requirePrivilegeForUser('view_scout_profiles'), async (req, res) => {
     try {
         const { userId } = req.params;
-
-        // Check access: own profile or troop leader/council admin
-        if (req.session.userId !== userId &&
-            !['troop_leader', 'council_admin'].includes(req.session.userRole)) {
-            return res.status(403).json({ error: 'Access denied' });
-        }
 
         const profile = await db.getOne(`
             SELECT
@@ -3166,7 +2990,7 @@ app.get('/api/scouts/:userId/profile', auth.isAuthenticated, async (req, res) =>
 
 // PUT /api/scouts/:userId/level
 // Update scout level (troop leaders and council admins only)
-app.put('/api/scouts/:userId/level', auth.isAuthenticated, auth.hasRole('troop_leader', 'council_admin'), async (req, res) => {
+app.put('/api/scouts/:userId/level', auth.isAuthenticated, auth.requirePrivilegeForUser('edit_scout_level'), async (req, res) => {
     try {
         const { userId } = req.params;
         const { levelId } = req.body;
@@ -3206,15 +3030,9 @@ app.put('/api/scouts/:userId/level', auth.isAuthenticated, auth.hasRole('troop_l
 
 // GET /api/scouts/:userId/badges
 // Get badges earned by scout
-app.get('/api/scouts/:userId/badges', auth.isAuthenticated, async (req, res) => {
+app.get('/api/scouts/:userId/badges', auth.isAuthenticated, auth.requirePrivilegeForUser('view_badge_progress'), async (req, res) => {
     try {
         const { userId } = req.params;
-
-        // Check access: own badges or troop leader/council admin
-        if (req.session.userId !== userId &&
-            !['troop_leader', 'council_admin'].includes(req.session.userRole)) {
-            return res.status(403).json({ error: 'Access denied' });
-        }
 
         const badges = await db.getAll(`
             SELECT
@@ -3241,7 +3059,7 @@ app.get('/api/scouts/:userId/badges', auth.isAuthenticated, async (req, res) => 
 
 // POST /api/scouts/:userId/badges
 // Award a badge to scout (troop leaders and council admins only)
-app.post('/api/scouts/:userId/badges', auth.isAuthenticated, auth.hasRole('troop_leader', 'council_admin'), async (req, res) => {
+app.post('/api/scouts/:userId/badges', auth.isAuthenticated, auth.requirePrivilegeForUser('award_badges'), async (req, res) => {
     try {
         const { userId } = req.params;
         const { badgeId, earnedDate, notes } = req.body;
@@ -3382,15 +3200,9 @@ app.get('/api/badge-catalogs/:catalogId/badges', auth.isAuthenticated, async (re
 
 // GET /api/scouts/:userId/available-badges
 // Get badges available for scout's current level (not yet earned)
-app.get('/api/scouts/:userId/available-badges', auth.isAuthenticated, async (req, res) => {
+app.get('/api/scouts/:userId/available-badges', auth.isAuthenticated, auth.requirePrivilegeForUser('view_badge_progress'), async (req, res) => {
     try {
         const { userId } = req.params;
-
-        // Check access
-        if (req.session.userId !== userId &&
-            !['troop_leader', 'council_admin'].includes(req.session.userRole)) {
-            return res.status(403).json({ error: 'Access denied' });
-        }
 
         // Get scout profile with level and organization
         const profile = await db.getOne(`
@@ -3432,38 +3244,10 @@ app.get('/api/scouts/:userId/available-badges', auth.isAuthenticated, async (req
 // Privilege Management Routes
 // ============================================================================
 
-// Helper: build effective privileges for a member
-function buildEffectivePrivileges(troopRole, overrides) {
-    const roleDefaults = ROLE_PRIVILEGE_DEFAULTS[troopRole] || ROLE_PRIVILEGE_DEFAULTS.member;
-    const overrideMap = {};
-    for (const o of overrides) {
-        overrideMap[o.privilegeCode] = o.scope;
-    }
-    return PRIVILEGE_DEFINITIONS.map(priv => {
-        const defaultScope = roleDefaults[priv.code] || 'none';
-        const hasOverride = priv.code in overrideMap;
-        return {
-            code: priv.code,
-            name: priv.name,
-            category: priv.category,
-            future: priv.future || false,
-            defaultScope,
-            effectiveScope: hasOverride ? overrideMap[priv.code] : defaultScope,
-            hasOverride
-        };
-    });
-}
-
 // Get effective privileges for a troop member
-app.get('/api/troop/:troopId/members/:userId/privileges', auth.isAuthenticated, async (req, res) => {
+app.get('/api/troop/:troopId/members/:userId/privileges', auth.isAuthenticated, auth.requirePrivilege('manage_privileges'), async (req, res) => {
     try {
         const { troopId, userId } = req.params;
-
-        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
-        if (!troop) return res.status(404).json({ error: 'Troop not found' });
-        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
-            return res.status(403).json({ error: 'Access denied' });
-        }
 
         const member = await db.getOne(`
             SELECT tm.role as "troopRole", u.id, u."firstName", u."lastName"
@@ -3489,7 +3273,7 @@ app.get('/api/troop/:troopId/members/:userId/privileges', auth.isAuthenticated, 
 });
 
 // Save privilege overrides for a troop member
-app.put('/api/troop/:troopId/members/:userId/privileges', auth.isAuthenticated, async (req, res) => {
+app.put('/api/troop/:troopId/members/:userId/privileges', auth.isAuthenticated, auth.requirePrivilege('manage_privileges'), async (req, res) => {
     try {
         const { troopId, userId } = req.params;
         const { overrides } = req.body;
@@ -3505,9 +3289,6 @@ app.put('/api/troop/:troopId/members/:userId/privileges', auth.isAuthenticated, 
 
         const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
         if (!troop) return res.status(404).json({ error: 'Troop not found' });
-        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
-            return res.status(403).json({ error: 'Access denied' });
-        }
 
         const member = await db.getOne(`
             SELECT tm.role as "troopRole", u.id
@@ -3573,15 +3354,9 @@ app.put('/api/troop/:troopId/members/:userId/privileges', auth.isAuthenticated, 
 });
 
 // Reset all privilege overrides for a troop member
-app.delete('/api/troop/:troopId/members/:userId/privileges', auth.isAuthenticated, async (req, res) => {
+app.delete('/api/troop/:troopId/members/:userId/privileges', auth.isAuthenticated, auth.requirePrivilege('manage_privileges'), async (req, res) => {
     try {
         const { troopId, userId } = req.params;
-
-        const troop = await db.getOne('SELECT * FROM troops WHERE id = $1', [troopId]);
-        if (!troop) return res.status(404).json({ error: 'Troop not found' });
-        if (troop.leaderId !== req.session.userId && req.session.userRole !== 'council_admin') {
-            return res.status(403).json({ error: 'Access denied' });
-        }
 
         await db.run(
             'DELETE FROM privilege_overrides WHERE "troopId" = $1 AND "userId" = $2',

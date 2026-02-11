@@ -254,3 +254,22 @@ When adding a scout under 18 (based on date of birth):
 * **Role-gated endpoints:** Creating troops, managing seasons, awarding badges, changing scout levels all require `troop_leader` or `council_admin`
 * **Privilege-gated:** Granular actions check the user's effective privilege (role default + any overrides)
 * **Superuser:** Bypasses all checks (development only)
+
+
+
+**Developer notes**  Added 2/10/26  10pm
+
+`Aditional role information that will need to be incorporated into the Schema
+
+#### Primary Leadership Roles
+- Troop Leader / Co-Leader: The main mentors who organize meetings, facilitate activities, and manage the troop's overall direction.
+- Troop Assistant / Advisor: Individuals who support the leader in running meetings and ensuring safety ratios are met. 
+#### Specialized Coordination Roles
+- Troop Cookie Manager: Oversees the annual cookie sale, handles inventory, and manages troop funds during the program.
+- Troop Treasurer: Manages the troop bank account, tracks expenses, and submits annual financial reports.
+- Fall Product Manager: Coordinates the Mags&Munchies or Fall Product sale.
+- Outdoor / Camping Coordinator: A certified adult who helps plan and lead outdoor trips and camping experiences. 
+#### Support & Committee Roles
+- Troop Driver & Chaperone: Background-checked adults who provide transportation and supervision during field trips.
+- First Aider: A volunteer with CPR/First Aid certification required for certain outings and high-adventure activities.
+- Troop Helper / Admin: A "catch-all" role for volunteers who assist with snacks, crafts, or communications on an as-needed basis. 
